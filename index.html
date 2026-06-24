@@ -1,0 +1,2355 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Copilot Studio 교육 | 초급 과정</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  :root {
+    --blue: #0f6cbd;
+    --blue-light: #2b88d8;
+    --blue-pale: #eff6fc;
+    --purple: #5c2d91;
+    --purple-light: #8661c5;
+    --purple-pale: #f5f0fb;
+    --surface: #ffffff;
+    --surface-2: #f8f9fc;
+    --border: #e5e9f0;
+    --text: #1a1d23;
+    --text-2: #5a6070;
+    --text-3: #8c92a0;
+    --accent: #0078d4;
+    --success: #107c10;
+    --gold: #c99a0f;
+    --gold-pale: #fdf6e3;
+    --radius: 14px;
+    --shadow: 0 2px 16px rgba(0,0,0,0.07);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+    --chat-width: 320px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    background: var(--surface-2);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ───── 로그인 오버레이 ───── */
+  #login-overlay {
+    position: fixed; inset: 0;
+    background: linear-gradient(135deg, #0f6cbd 0%, #5c2d91 100%);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000;
+    animation: fadeIn 0.4s ease;
+  }
+  .login-card {
+    background: #fff; border-radius: 24px;
+    padding: 48px 40px; width: 400px; max-width: 92vw;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.2);
+    text-align: center;
+  }
+  .login-logo {
+    width: 72px; height: 72px; margin: 0 auto 20px;
+    background: linear-gradient(135deg, #0f6cbd, #5c2d91);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 36px;
+  }
+  .login-card h2 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .login-card p { color: var(--text-2); font-size: 14px; margin-bottom: 28px; }
+  .login-input {
+    width: 100%; padding: 13px 16px;
+    border: 1.5px solid var(--border); border-radius: 10px;
+    font-size: 15px; margin-bottom: 12px;
+    transition: border-color 0.2s;
+    outline: none;
+  }
+  .login-input:focus { border-color: var(--blue); }
+  .login-btn {
+    width: 100%; padding: 14px;
+    background: linear-gradient(90deg, #0f6cbd, #5c2d91);
+    color: #fff; border: none; border-radius: 10px;
+    font-size: 16px; font-weight: 600; cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+  .login-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+  .login-btn:active { transform: translateY(0); }
+  .login-error {
+    color: #c0392b; font-size: 13px; margin-top: 8px;
+    min-height: 18px;
+  }
+
+  /* ───── 상단 헤더 ───── */
+  #header {
+    position: sticky; top: 0; z-index: 200;
+    background: rgba(255,255,255,0.96);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+  }
+  .header-inner {
+    max-width: 1400px; margin: 0 auto;
+    height: 60px; display: flex; align-items: center; gap: 16px;
+  }
+  .header-logo {
+    display: flex; align-items: center; gap: 10px;
+    font-weight: 700; font-size: 16px; color: var(--blue);
+    flex-shrink: 0;
+  }
+  .header-logo span { font-size: 24px; }
+  .course-badge {
+    background: var(--blue-pale); color: var(--blue);
+    padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600;
+  }
+
+  /* 전체 진행률 바 */
+  .progress-section {
+    flex: 1; display: flex; align-items: center; gap: 12px;
+  }
+  .progress-label { font-size: 12px; color: var(--text-2); white-space: nowrap; }
+  .progress-track {
+    flex: 1; height: 8px; background: var(--border); border-radius: 4px;
+    overflow: hidden; max-width: 200px;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #0f6cbd, #5c2d91);
+    border-radius: 4px;
+    transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
+  }
+  .progress-pct { font-size: 12px; font-weight: 600; color: var(--blue); }
+
+  /* 포인트 표시 */
+  .points-display {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--gold-pale);
+    border: 1px solid #e8d080;
+    border-radius: 20px; padding: 4px 14px;
+    font-size: 14px; font-weight: 700; color: #8a6a00;
+    transition: transform 0.2s;
+  }
+  .points-display.bump { animation: pointBump 0.5s ease; }
+  @keyframes pointBump {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.25); }
+    100% { transform: scale(1); }
+  }
+  .points-coin { font-size: 18px; }
+  #points-value { transition: all 0.3s; }
+
+  /* 사용자 정보 */
+  .user-info {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; font-weight: 600;
+  }
+  .user-avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; color: #fff;
+  }
+  .logout-btn {
+    background: none; border: 1px solid var(--border);
+    border-radius: 8px; padding: 4px 10px;
+    font-size: 12px; color: var(--text-2); cursor: pointer;
+    transition: background 0.2s;
+  }
+  .logout-btn:hover { background: var(--surface-2); }
+
+  /* 채팅 토글 버튼 */
+  .chat-toggle {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--blue); color: #fff; border: none;
+    font-size: 18px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+    transition: background 0.2s;
+  }
+  .chat-toggle:hover { background: var(--blue-light); }
+  .chat-badge {
+    position: absolute; top: -3px; right: -3px;
+    width: 16px; height: 16px; background: #e74c3c;
+    border-radius: 50%; font-size: 10px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    display: none;
+  }
+
+  /* ───── 메인 레이아웃 ───── */
+  #main-layout {
+    flex: 1; display: flex; max-width: 100%;
+    transition: margin-right 0.3s ease;
+  }
+
+  /* ───── 컨텐츠 영역 ───── */
+  #content-area {
+    flex: 1; overflow: hidden;
+    transition: margin-right 0.3s ease;
+  }
+
+  /* ───── 히어로 섹션 ───── */
+  .hero {
+    background: linear-gradient(135deg, #0a2d5c 0%, #1a0b3d 50%, #0d3d6b 100%);
+    color: #fff;
+    padding: 60px 24px 40px;
+    position: relative; overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Ccircle cx='30' cy='30' r='20'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  }
+  .hero-inner { max-width: 1100px; margin: 0 auto; position: relative; }
+  
+  .hero-tag {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 20px; padding: 5px 14px; font-size: 12px; font-weight: 600;
+    margin-bottom: 20px; letter-spacing: 0.3px;
+  }
+  
+  .hero h1 {
+    font-size: clamp(28px, 4vw, 44px);
+    font-weight: 800; line-height: 1.2;
+    margin-bottom: 14px;
+    background: linear-gradient(90deg, #fff 60%, #a0c4ff);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .hero p {
+    font-size: 16px; color: rgba(255,255,255,0.75);
+    max-width: 560px; line-height: 1.7; margin-bottom: 28px;
+  }
+
+  /* 코파일럿 스튜디오 UI 시뮬레이션 이미지 */
+  .hero-ui-mockup {
+    margin-top: 32px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  }
+  .mockup-topbar {
+    background: rgba(255,255,255,0.1);
+    padding: 10px 16px;
+    display: flex; align-items: center; gap: 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .mockup-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .mockup-title {
+    margin-left: 8px; font-size: 13px; font-weight: 600;
+    color: rgba(255,255,255,0.8);
+  }
+  .mockup-body {
+    display: flex; height: 260px;
+  }
+  .mockup-sidebar {
+    width: 200px; background: rgba(0,0,0,0.2);
+    padding: 16px 12px;
+    border-right: 1px solid rgba(255,255,255,0.06);
+    flex-shrink: 0;
+  }
+  .mockup-nav-item {
+    padding: 8px 10px; border-radius: 8px;
+    font-size: 12px; color: rgba(255,255,255,0.6);
+    margin-bottom: 4px; cursor: default;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .mockup-nav-item.active {
+    background: rgba(99,102,241,0.3); color: #fff;
+  }
+  .mockup-canvas {
+    flex: 1; padding: 20px; position: relative;
+  }
+  .mockup-agent-node {
+    position: absolute;
+    background: rgba(255,255,255,0.1);
+    border: 1.5px solid rgba(99,102,241,0.5);
+    border-radius: 12px; padding: 12px 16px;
+    font-size: 11px; color: rgba(255,255,255,0.85);
+    backdrop-filter: blur(4px);
+  }
+  .mockup-arrow {
+    position: absolute; width: 2px; background: rgba(99,102,241,0.5);
+    transform-origin: top;
+  }
+  .mockup-connector {
+    position: absolute;
+    border: 2px dashed rgba(99,102,241,0.3);
+    border-radius: 8px;
+  }
+
+  /* 과정 메타 정보 */
+  .course-meta {
+    display: flex; gap: 24px; flex-wrap: wrap; margin-top: 24px;
+  }
+  .meta-item {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; color: rgba(255,255,255,0.8);
+  }
+  .meta-icon { font-size: 16px; }
+
+  /* ───── 카드 교육 영역 ───── */
+  .cards-section {
+    max-width: 1100px; margin: 0 auto;
+    padding: 40px 24px 60px;
+  }
+
+  /* 목차 네비게이션 */
+  .toc-nav {
+    display: flex; gap: 8px; flex-wrap: wrap;
+    margin-bottom: 28px;
+  }
+  .toc-btn {
+    padding: 6px 14px; border-radius: 20px;
+    border: 1.5px solid var(--border);
+    background: #fff; font-size: 13px; cursor: pointer;
+    transition: all 0.2s; color: var(--text-2);
+  }
+  .toc-btn.active {
+    background: var(--blue); border-color: var(--blue);
+    color: #fff; font-weight: 600;
+  }
+  .toc-btn.done {
+    background: #e8f5e9; border-color: #81c784; color: #2e7d32;
+  }
+
+  /* 카드 컨테이너 */
+  .card-container {
+    position: relative; overflow: hidden;
+  }
+
+  /* 개별 슬라이드 카드 */
+  .edu-card {
+    background: #fff;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    display: none;
+    animation: slideIn 0.4s cubic-bezier(0.4,0,0.2,1);
+  }
+  .edu-card.active { display: block; }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(40px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes slideBack {
+    from { opacity: 0; transform: translateX(-40px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  .edu-card.slide-back { animation: slideBack 0.4s cubic-bezier(0.4,0,0.2,1); }
+
+  .card-header {
+    background: linear-gradient(135deg, var(--blue-pale), var(--purple-pale));
+    padding: 24px 28px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .card-number {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1px; color: var(--blue); margin-bottom: 6px;
+  }
+  .card-title {
+    font-size: 22px; font-weight: 800; color: var(--text);
+    margin-bottom: 6px;
+  }
+  .card-subtitle { font-size: 14px; color: var(--text-2); }
+
+  .card-body { padding: 28px; }
+
+  /* 카드 내 콘텐츠 */
+  .card-content-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
+    align-items: start;
+  }
+  @media (max-width: 700px) {
+    .card-content-grid { grid-template-columns: 1fr; }
+  }
+
+  .content-text h3 { font-size: 16px; font-weight: 700; margin-bottom: 10px; color: var(--text); }
+  .content-text p { font-size: 14px; color: var(--text-2); line-height: 1.7; margin-bottom: 12px; }
+  .content-text ul { padding-left: 18px; }
+  .content-text li { font-size: 14px; color: var(--text-2); line-height: 1.8; }
+
+  /* UI 스크린샷 시뮬레이션 */
+  .ui-screenshot {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .screenshot-bar {
+    background: linear-gradient(90deg, #0f6cbd, #5c2d91);
+    height: 6px;
+  }
+  .screenshot-body { padding: 16px; }
+
+  /* 하이라이트 박스 */
+  .highlight-box {
+    background: var(--blue-pale);
+    border-left: 4px solid var(--blue);
+    border-radius: 0 8px 8px 0;
+    padding: 12px 16px;
+    margin: 12px 0;
+    font-size: 13px; color: var(--blue); line-height: 1.6;
+  }
+  .tip-box {
+    background: #fff8e1;
+    border-left: 4px solid #ffc107;
+    border-radius: 0 8px 8px 0;
+    padding: 12px 16px;
+    margin: 12px 0;
+    font-size: 13px; color: #7a5800; line-height: 1.6;
+  }
+  .step-list { list-style: none; padding: 0; }
+  .step-list li {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 10px 0; border-bottom: 1px solid var(--border);
+    font-size: 14px; color: var(--text-2);
+  }
+  .step-list li:last-child { border-bottom: none; }
+  .step-num {
+    width: 24px; height: 24px; flex-shrink: 0;
+    background: var(--blue); color: #fff;
+    border-radius: 50%; font-size: 12px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* 실습 파일 다운로드 */
+  .file-download-area {
+    background: var(--surface-2);
+    border: 1.5px dashed var(--border);
+    border-radius: 10px; padding: 16px;
+    margin-top: 16px;
+  }
+  .file-download-area h4 { font-size: 13px; font-weight: 700; margin-bottom: 10px; color: var(--text); }
+  .download-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: #fff; border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 14px;
+    font-size: 13px; color: var(--text); cursor: pointer;
+    text-decoration: none; margin: 4px;
+    transition: all 0.2s;
+  }
+  .download-btn:hover { background: var(--blue-pale); border-color: var(--blue); color: var(--blue); }
+
+  /* 카드 하단 네비게이션 */
+  .card-footer {
+    padding: 20px 28px;
+    background: var(--surface-2);
+    border-top: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px;
+  }
+  .card-counter { font-size: 13px; color: var(--text-3); }
+  .nav-btns { display: flex; gap: 10px; }
+  .nav-btn {
+    padding: 10px 20px; border-radius: 8px;
+    border: none; font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .nav-btn.prev {
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--text-2);
+  }
+  .nav-btn.prev:hover { background: var(--surface-2); }
+  .nav-btn.next {
+    background: linear-gradient(90deg, #0f6cbd, #5c2d91);
+    color: #fff; display: flex; align-items: center; gap: 6px;
+  }
+  .nav-btn.next:hover { opacity: 0.9; transform: translateX(2px); }
+  .nav-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  /* 포인트 획득 팝업 */
+  .point-popup {
+    position: fixed; top: 80px; left: 50%;
+    transform: translateX(-50%) translateY(-20px);
+    background: linear-gradient(90deg, #f6c90e, #ff8c00);
+    color: #fff; border-radius: 30px;
+    padding: 10px 24px; font-size: 15px; font-weight: 700;
+    box-shadow: 0 4px 20px rgba(246,201,14,0.4);
+    z-index: 500;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.3s, transform 0.3s;
+  }
+  .point-popup.show {
+    opacity: 1; transform: translateX(-50%) translateY(0);
+  }
+
+  /* ───── 채팅 패널 ───── */
+  #chat-panel {
+    width: var(--chat-width);
+    background: #fff;
+    border-left: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    position: fixed; top: 60px; right: 0; bottom: 0;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    z-index: 100;
+    box-shadow: -4px 0 20px rgba(0,0,0,0.08);
+  }
+  #chat-panel.open { transform: translateX(0); }
+
+  .chat-header {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .chat-header-title {
+    font-size: 14px; font-weight: 700;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .online-dot {
+    width: 8px; height: 8px; background: #22c55e;
+    border-radius: 50%;
+    box-shadow: 0 0 0 2px rgba(34,197,94,0.3);
+  }
+  .online-count {
+    font-size: 12px; color: var(--text-3); font-weight: 400;
+  }
+  .chat-close {
+    background: none; border: none; font-size: 18px;
+    cursor: pointer; color: var(--text-3); line-height: 1;
+  }
+
+  .chat-online-list {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex; gap: 6px; flex-wrap: wrap;
+    max-height: 60px; overflow: hidden;
+  }
+  .online-pill {
+    display: flex; align-items: center; gap: 4px;
+    background: var(--surface-2); border-radius: 12px;
+    padding: 2px 8px; font-size: 11px; color: var(--text-2);
+  }
+  .online-avatar {
+    width: 16px; height: 16px; border-radius: 50%;
+    font-size: 9px; font-weight: 700; color: #fff;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .chat-messages {
+    flex: 1; overflow-y: auto; padding: 12px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .chat-msg {
+    max-width: 85%;
+  }
+  .chat-msg.mine { align-self: flex-end; }
+  .msg-meta {
+    font-size: 10px; color: var(--text-3); margin-bottom: 3px;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .chat-msg.mine .msg-meta { justify-content: flex-end; }
+  .msg-avatar {
+    width: 16px; height: 16px; border-radius: 50%;
+    font-size: 8px; font-weight: 700; color: #fff;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .msg-bubble {
+    padding: 8px 12px; border-radius: 12px;
+    font-size: 13px; line-height: 1.5; word-break: break-word;
+    background: var(--surface-2); color: var(--text);
+    border-radius: 4px 12px 12px 12px;
+  }
+  .chat-msg.mine .msg-bubble {
+    background: var(--blue); color: #fff;
+    border-radius: 12px 4px 12px 12px;
+  }
+  .msg-image {
+    max-width: 100%; border-radius: 8px;
+    display: block; cursor: pointer;
+    margin-top: 4px;
+  }
+  .msg-file {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(255,255,255,0.15); border-radius: 8px;
+    padding: 8px; font-size: 12px; cursor: pointer;
+    text-decoration: none; color: inherit;
+    margin-top: 4px;
+  }
+  .chat-msg.mine .msg-file { color: #fff; }
+
+  .chat-input-area {
+    border-top: 1px solid var(--border);
+    padding: 10px 12px;
+  }
+  .drag-hint {
+    font-size: 11px; color: var(--text-3); text-align: center;
+    margin-bottom: 6px;
+  }
+  .chat-input-row {
+    display: flex; gap: 6px; align-items: flex-end;
+  }
+  .chat-textarea {
+    flex: 1; border: 1.5px solid var(--border);
+    border-radius: 10px; padding: 8px 10px;
+    font-size: 13px; resize: none; outline: none;
+    font-family: inherit; min-height: 38px; max-height: 100px;
+    transition: border-color 0.2s;
+  }
+  .chat-textarea:focus { border-color: var(--blue); }
+  .chat-send-btn {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: var(--blue); color: #fff; border: none;
+    font-size: 16px; cursor: pointer; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s;
+  }
+  .chat-send-btn:hover { background: var(--blue-light); }
+  .attach-btn {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: var(--surface-2); color: var(--text-2); border: 1px solid var(--border);
+    font-size: 16px; cursor: pointer; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+  }
+  .attach-btn:hover { background: var(--blue-pale); color: var(--blue); }
+  #file-input { display: none; }
+
+  /* 드래그 오버레이 */
+  .drag-overlay {
+    position: fixed; inset: 0;
+    background: rgba(15,108,189,0.15);
+    border: 3px dashed var(--blue);
+    z-index: 900; display: none;
+    align-items: center; justify-content: center;
+    font-size: 20px; font-weight: 700; color: var(--blue);
+    pointer-events: none;
+  }
+  .drag-overlay.active { display: flex; }
+
+  /* ───── 완료 화면 ───── */
+  .completion-card {
+    background: #fff; border-radius: var(--radius);
+    padding: 48px; text-align: center;
+    box-shadow: var(--shadow);
+  }
+  .completion-emoji { font-size: 64px; margin-bottom: 16px; }
+  .completion-card h2 { font-size: 28px; font-weight: 800; margin-bottom: 8px; }
+  .completion-card p { color: var(--text-2); font-size: 15px; margin-bottom: 24px; }
+  .final-points {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--gold-pale); border: 2px solid #e8d080;
+    border-radius: 30px; padding: 12px 28px;
+    font-size: 22px; font-weight: 800; color: #8a6a00;
+    margin-bottom: 32px;
+  }
+
+  /* 다시보기 / 다음 과정 버튼 */
+  .action-btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .action-btn {
+    padding: 12px 24px; border-radius: 10px;
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    border: none; transition: all 0.2s;
+  }
+  .action-btn.secondary {
+    background: var(--surface-2); color: var(--text-2);
+    border: 1px solid var(--border);
+  }
+  .action-btn.primary {
+    background: linear-gradient(90deg, #0f6cbd, #5c2d91); color: #fff;
+  }
+  .action-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+  @keyframes fadeIn {
+    from { opacity: 0; } to { opacity: 1; }
+  }
+  .bonus-card-hidden { display: none !important; }
+  .bonus-visible { display: block !important; animation: slideIn 0.5s ease; }
+
+  /* 보너스 퀴즈 잠금 안내 */
+  .bonus-lock-banner {
+    background: linear-gradient(135deg, var(--gold-pale), #fff8e1);
+    border: 2px solid #e8d080; border-radius: 14px;
+    padding: 24px; text-align: center; margin-top: 24px;
+  }
+  .bonus-lock-banner .lock-icon { font-size: 40px; margin-bottom: 8px; }
+  .bonus-lock-banner h3 { font-size: 16px; font-weight: 800; color: #8a6a00; margin-bottom: 6px; }
+  .bonus-lock-banner p { font-size: 13px; color: var(--text-2); }
+
+  /* 개념 카드 그리드 */
+  .concept-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px; margin: 16px 0;
+  }
+  .concept-card {
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px;
+    transition: all 0.2s; cursor: default;
+  }
+  .concept-card:hover { border-color: var(--blue); transform: translateY(-2px); }
+  .concept-icon { font-size: 28px; margin-bottom: 8px; }
+  .concept-card h4 { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+  .concept-card p { font-size: 12px; color: var(--text-2); line-height: 1.5; }
+
+  /* 퀴즈 스타일 */
+  .quiz-options { display: flex; flex-direction: column; gap: 8px; margin: 16px 0; }
+  .quiz-option {
+    padding: 12px 16px; border: 1.5px solid var(--border);
+    border-radius: 10px; cursor: pointer; font-size: 14px;
+    transition: all 0.2s; background: #fff;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .quiz-option:hover { border-color: var(--blue); background: var(--blue-pale); }
+  .quiz-option.correct { border-color: #22c55e; background: #f0fdf4; color: #15803d; }
+  .quiz-option.wrong { border-color: #ef4444; background: #fef2f2; color: #dc2626; }
+  .quiz-result { 
+    padding: 12px 16px; border-radius: 8px; font-size: 14px; 
+    margin-top: 8px; font-weight: 600; display: none;
+  }
+  .quiz-result.show { display: block; }
+  .quiz-result.correct { background: #f0fdf4; color: #15803d; }
+  .quiz-result.wrong { background: #fef2f2; color: #dc2626; }
+</style>
+</head>
+<body>
+
+<!-- 드래그 오버레이 -->
+<div class="drag-overlay" id="drag-overlay">📎 여기에 파일을 놓으세요</div>
+
+<!-- 포인트 팝업 -->
+<div class="point-popup" id="point-popup">🎉 +10 포인트!</div>
+
+<!-- ───── 로그인 오버레이 ───── -->
+<div id="login-overlay">
+  <div class="login-card">
+    <div class="login-logo">🤖</div>
+    <h2>Copilot Studio 교육</h2>
+    <p>초급 과정에 오신 것을 환영합니다!<br>닉네임과 비밀번호를 입력하세요.<br><span style="font-size:12px;color:var(--text-3);">처음 입력하는 닉네임+비밀번호로 계정이 만들어집니다</span></p>
+    <input type="text" class="login-input" id="login-name" placeholder="닉네임 입력 (2~12자)" maxlength="12" autocomplete="off">
+    <input type="password" class="login-input" id="login-pw" placeholder="입장 비밀번호" autocomplete="off">
+    <button class="login-btn" onclick="doLogin()">🚀 학습 시작하기</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- ───── 헤더 ───── -->
+<div id="header" style="display:none;">
+  <div class="header-inner">
+    <div class="header-logo">
+      <span>🤖</span> Copilot 교육
+      <span class="course-badge">초급 4H</span>
+    </div>
+
+    <div class="progress-section">
+      <span class="progress-label">전체 진행률</span>
+      <div class="progress-track">
+        <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+      </div>
+      <span class="progress-pct" id="progress-pct">0%</span>
+    </div>
+
+    <div class="points-display" id="points-display">
+      <span class="points-coin">🪙</span>
+      <span id="points-value">0</span> pt
+    </div>
+
+    <div class="user-info">
+      <div class="user-avatar" id="user-avatar"></div>
+      <span id="user-name-display"></span>
+    </div>
+
+    <button class="logout-btn" onclick="doLogout()">나가기</button>
+
+    <button class="chat-toggle" onclick="toggleChat()" title="실시간 채팅">
+      💬
+      <div class="chat-badge" id="chat-badge">!</div>
+    </button>
+  </div>
+</div>
+
+<!-- ───── 메인 레이아웃 ───── -->
+<div id="main-layout" style="display:none;">
+  <div id="content-area">
+
+    <!-- 히어로 -->
+    <div class="hero">
+      <div class="hero-inner">
+        <div class="hero-tag">⚡ Microsoft Copilot Studio · 초급 과정</div>
+        <h1>AI 에이전트를 직접<br>만들어 봅시다</h1>
+        <p>코딩 없이도 누구나 만들 수 있는 Copilot Studio.<br>
+        AI 에이전트의 개념부터 실전 제작까지, 4시간으로 마스터하세요.</p>
+
+        <div class="course-meta">
+          <div class="meta-item"><span class="meta-icon">⏱️</span> 총 4시간</div>
+          <div class="meta-item"><span class="meta-icon">📚</span> 12개 학습 카드</div>
+          <div class="meta-item"><span class="meta-icon">🏆</span> 최대 120pt 획득</div>
+          <div class="meta-item"><span class="meta-icon">💻</span> 실습 파일 포함</div>
+        </div>
+
+        <!-- Copilot Studio UI 목업 -->
+        <div class="hero-ui-mockup">
+          <div class="mockup-topbar">
+            <div class="mockup-dot" style="background:#ff5f57"></div>
+            <div class="mockup-dot" style="background:#febc2e"></div>
+            <div class="mockup-dot" style="background:#28c840"></div>
+            <span class="mockup-title">🤖 Microsoft Copilot Studio — 새 에이전트 만들기</span>
+          </div>
+          <div class="mockup-body">
+            <div class="mockup-sidebar">
+              <div style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:8px;font-weight:600;letter-spacing:0.5px;">NAVIGATION</div>
+              <div class="mockup-nav-item active">🏠 홈</div>
+              <div class="mockup-nav-item">🤖 에이전트</div>
+              <div class="mockup-nav-item">🔗 액션</div>
+              <div class="mockup-nav-item">📊 분석</div>
+              <div class="mockup-nav-item">⚙️ 설정</div>
+              <div style="height:1px;background:rgba(255,255,255,0.06);margin:12px 0;"></div>
+              <div style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:6px;font-weight:600;letter-spacing:0.5px;">MY AGENTS</div>
+              <div class="mockup-nav-item" style="background:rgba(255,255,255,0.05);">📋 FAQ 에이전트</div>
+              <div class="mockup-nav-item" style="background:rgba(255,255,255,0.05);">🎫 HR 도우미</div>
+            </div>
+            <div class="mockup-canvas">
+              <div style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:12px;font-weight:600;">대화 흐름 편집기</div>
+              <div class="mockup-agent-node" style="top:20px;left:20px;">
+                <div style="font-size:9px;color:rgba(255,255,255,0.5);margin-bottom:3px;">시작 노드</div>
+                <div>🟢 사용자 입력</div>
+              </div>
+              <div class="mockup-agent-node" style="top:20px;left:160px;">
+                <div style="font-size:9px;color:rgba(255,255,255,0.5);margin-bottom:3px;">AI 처리</div>
+                <div>🤖 의도 파악</div>
+              </div>
+              <div class="mockup-agent-node" style="top:100px;left:90px;">
+                <div style="font-size:9px;color:rgba(255,255,255,0.5);margin-bottom:3px;">응답 생성</div>
+                <div>💬 메시지 전송</div>
+              </div>
+              <div style="position:absolute;top:32px;left:120px;width:40px;height:1px;background:rgba(99,102,241,0.5);"></div>
+              <div style="position:absolute;top:32px;left:248px;width:2px;height:78px;background:rgba(99,102,241,0.4);"></div>
+              <div style="position:absolute;top:108px;left:102px;width:146px;height:1px;background:rgba(99,102,241,0.4);"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 카드 교육 섹션 -->
+    <div class="cards-section">
+      <!-- 목차 -->
+      <div class="toc-nav" id="toc-nav"></div>
+
+      <!-- 카드 컨테이너 -->
+      <div class="card-container" id="card-container"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 채팅 패널 -->
+<div id="chat-panel">
+  <div class="chat-header">
+    <div class="chat-header-title">
+      <div class="online-dot"></div>
+      현재 접속 중인 학습자 <span class="online-count" id="online-count">(0명)</span>
+    </div>
+    <button class="chat-close" onclick="toggleChat()">✕</button>
+  </div>
+  <div class="chat-online-list" id="chat-online-list"></div>
+  <div class="chat-messages" id="chat-messages">
+    <div style="text-align:center;color:var(--text-3);font-size:12px;padding:20px 0;">
+      같은 페이지를 보고 있는 학습자들과 소통하세요 💬
+    </div>
+  </div>
+  <div class="chat-input-area">
+    <div class="drag-hint">📎 파일/이미지를 드래그하거나 붙여넣기(Ctrl+V)</div>
+    <div class="chat-input-row">
+      <button class="attach-btn" onclick="document.getElementById('file-input').click()" title="파일 첨부">📎</button>
+      <textarea class="chat-textarea" id="chat-input" placeholder="메시지 입력..." rows="1"
+        onkeydown="handleChatKey(event)" oninput="autoResize(this)"></textarea>
+      <button class="chat-send-btn" onclick="sendMessage()">➤</button>
+    </div>
+    <input type="file" id="file-input" accept="image/*,.pdf,.xlsx,.pptx,.docx" onchange="handleFileUpload(this)">
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────
+// 설정
+// ─────────────────────────────────────
+const SUPABASE_URL = 'https://koozkqdpmzuanzpcotsv.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_tgw1uLAyJZaVgzfH7lTYAA_gLPst_GA';
+const PAGE_ID = 'beginner';
+const POINTS_PER_CARD = 10;
+const COLORS = ['#6366f1','#0f6cbd','#5c2d91','#16a34a','#dc2626','#d97706','#0891b2','#7c3aed'];
+
+let sb = null;
+let currentUser = null;
+let currentCard = 0;
+let completedCards = new Set();
+let totalPoints = 0;
+let chatChannel = null;
+let sessionChannel = null;
+let chatOpen = false;
+let onlineUsers = [];
+let unreadCount = 0;
+
+// ─────────────────────────────────────
+// 교육 콘텐츠 정의 (12개 카드)
+// ─────────────────────────────────────
+const CARDS = [
+  {
+    id: 'intro',
+    title: 'Copilot Studio란 무엇인가?',
+    subtitle: 'AI 에이전트 개념 이해하기 · 15분',
+    section: '1. 개념 소개',
+    content: `
+      <div class="card-content-grid">
+        <div class="content-text">
+          <h3>🤖 AI 에이전트란?</h3>
+          <p>AI 에이전트는 사용자의 질문에 자동으로 답변하고, 업무를 처리하는 지능형 도우미입니다. 단순 챗봇과 달리 <strong>맥락을 이해</strong>하고 <strong>복잡한 작업을 수행</strong>할 수 있습니다.</p>
+          <div class="highlight-box">
+            💡 Microsoft Copilot Studio는 코딩 없이도 누구나 AI 에이전트를 만들 수 있는 로우코드 플랫폼입니다.
+          </div>
+          <h3 style="margin-top:16px;">📌 주요 활용 사례</h3>
+          <ul>
+            <li>HR FAQ 자동 응답 에이전트</li>
+            <li>고객 지원 헬프데스크 봇</li>
+            <li>내부 지식 검색 에이전트</li>
+            <li>회의 일정 관리 도우미</li>
+          </ul>
+        </div>
+        <div>
+          <div class="concept-grid">
+            <div class="concept-card">
+              <div class="concept-icon">🧠</div>
+              <h4>생성형 AI</h4>
+              <p>GPT 기반으로 자연스러운 대화 생성</p>
+            </div>
+            <div class="concept-card">
+              <div class="concept-icon">🔗</div>
+              <h4>연결성</h4>
+              <p>M365, SharePoint, API 연동 가능</p>
+            </div>
+            <div class="concept-card">
+              <div class="concept-icon">⚙️</div>
+              <h4>로우코드</h4>
+              <p>드래그&드롭으로 흐름 설계</p>
+            </div>
+            <div class="concept-card">
+              <div class="concept-icon">📊</div>
+              <h4>분석</h4>
+              <p>대화 품질 및 사용 현황 대시보드</p>
+            </div>
+          </div>
+          <div class="tip-box">
+            ⚠️ Copilot Studio는 기존 Power Virtual Agents(PVA)가 발전한 형태입니다.
+          </div>
+        </div>
+      </div>`,
+    files: []
+  },
+  {
+    id: 'difference',
+    title: '에이전트 vs 챗봇 vs Copilot',
+    subtitle: '세 가지 AI 유형 비교 이해하기 · 15분',
+    section: '1. 개념 소개',
+    content: `
+      <div class="content-text">
+        <h3>🔍 세 가지 AI 유형 비교</h3>
+        <p>모두 AI 기반이지만 목적과 능력이 다릅니다. 차이점을 정확히 이해해야 올바른 도구를 선택할 수 있습니다.</p>
+        <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;">
+          <thead>
+            <tr style="background:var(--blue-pale);">
+              <th style="padding:10px 12px;text-align:left;border-bottom:2px solid var(--blue);color:var(--blue);">구분</th>
+              <th style="padding:10px 12px;text-align:left;border-bottom:2px solid var(--blue);">기존 챗봇</th>
+              <th style="padding:10px 12px;text-align:left;border-bottom:2px solid var(--blue);">Copilot (M365)</th>
+              <th style="padding:10px 12px;text-align:left;border-bottom:2px solid var(--blue);">Copilot Studio 에이전트</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td style="padding:10px 12px;border-bottom:1px solid var(--border);font-weight:600;">기술 기반</td><td style="padding:10px 12px;border-bottom:1px solid var(--border);">규칙/키워드 매칭</td><td style="padding:10px 12px;border-bottom:1px solid var(--border);">GPT-4 (Microsoft)</td><td style="padding:10px 12px;border-bottom:1px solid var(--border);">GPT-4 + 커스텀 로직</td></tr>
+            <tr style="background:var(--surface-2);"><td style="padding:10px 12px;border-bottom:1px solid var(--border);font-weight:600;">맞춤화 수준</td><td style="padding:10px 12px;border-bottom:1px solid var(--border);">낮음</td><td style="padding:10px 12px;border-bottom:1px solid var(--border);">중간</td><td style="padding:10px 12px;border-bottom:1px solid var(--border);">🌟 높음</td></tr>
+            <tr><td style="padding:10px 12px;border-bottom:1px solid var(--border);font-weight:600;">배포 위치</td><td style="padding:10px 12px;border-bottom:1px solid var(--border);">웹사이트</td><td style="padding:10px 12px;border-bottom:1px solid var(--border);">M365 앱 내</td><td style="padding:10px 12px;border-bottom:1px solid var(--border);">Teams, 웹, M365 등</td></tr>
+            <tr style="background:var(--surface-2);"><td style="padding:10px 12px;font-weight:600;">외부 연동</td><td style="padding:10px 12px;">제한적</td><td style="padding:10px 12px;">M365 데이터</td><td style="padding:10px 12px;">🌟 API, DB, Power Platform</td></tr>
+          </tbody>
+        </table>
+        <div class="highlight-box">
+          🎯 결론: 조직 특화 업무를 자동화하려면 <strong>Copilot Studio 에이전트</strong>가 최적입니다.
+        </div>
+      </div>`,
+    files: []
+  },
+  {
+    id: 'architecture',
+    title: 'Copilot Studio 아키텍처',
+    subtitle: '플랫폼 구조와 핵심 컴포넌트 · 20분',
+    section: '2. 플랫폼 이해',
+    content: `
+      <div class="card-content-grid">
+        <div class="content-text">
+          <h3>🏗️ 핵심 4대 컴포넌트</h3>
+          <ul class="step-list">
+            <li><div class="step-num">1</div><div><strong>Topics (토픽)</strong> — 대화 흐름을 정의하는 기본 단위. "날씨 알려줘"처럼 특정 의도에 매핑됩니다.</div></li>
+            <li><div class="step-num">2</div><div><strong>Entities (엔티티)</strong> — 사용자 입력에서 추출할 정보 유형 (날짜, 이름, 금액 등)</div></li>
+            <li><div class="step-num">3</div><div><strong>Actions (액션)</strong> — 외부 시스템 연동이나 Power Automate 흐름 실행</div></li>
+            <li><div class="step-num">4</div><div><strong>Knowledge (지식)</strong> — SharePoint, 웹사이트, 파일 등 AI가 참조할 데이터 소스</div></li>
+          </ul>
+        </div>
+        <div class="ui-screenshot">
+          <div class="screenshot-bar"></div>
+          <div class="screenshot-body">
+            <div style="font-size:12px;font-weight:700;margin-bottom:10px;color:var(--blue);">📋 Copilot Studio 좌측 메뉴 구조</div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <div style="padding:8px 10px;background:var(--blue-pale);border-radius:6px;font-size:12px;display:flex;align-items:center;gap:8px;"><span>🏠</span> 개요</div>
+              <div style="padding:8px 10px;background:var(--purple-pale);border-radius:6px;font-size:12px;display:flex;align-items:center;gap:8px;font-weight:600;"><span>💬</span> Topics (토픽) ← 핵심!</div>
+              <div style="padding:8px 10px;background:var(--surface-2);border-radius:6px;font-size:12px;display:flex;align-items:center;gap:8px;"><span>⚡</span> 액션</div>
+              <div style="padding:8px 10px;background:var(--surface-2);border-radius:6px;font-size:12px;display:flex;align-items:center;gap:8px;"><span>📚</span> 지식</div>
+              <div style="padding:8px 10px;background:var(--surface-2);border-radius:6px;font-size:12px;display:flex;align-items:center;gap:8px;"><span>🔌</span> 채널</div>
+              <div style="padding:8px 10px;background:var(--surface-2);border-radius:6px;font-size:12px;display:flex;align-items:center;gap:8px;"><span>📊</span> 분석</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="highlight-box" style="margin-top:16px;">
+        🔑 접속 경로: <strong>https://copilotstudio.microsoft.com</strong> → Microsoft 365 계정으로 로그인
+      </div>`,
+    files: ['lab01_architecture.pdf']
+  },
+  {
+    id: 'login',
+    title: 'Copilot Studio 접속 및 환경 설정',
+    subtitle: '처음 접속부터 환경 확인까지 · 20분',
+    section: '2. 플랫폼 이해',
+    content: `
+      <div class="card-content-grid">
+        <div class="content-text">
+          <h3>🖥️ 접속 및 초기 설정 순서</h3>
+          <ul class="step-list">
+            <li><div class="step-num">1</div><div>브라우저에서 <code style="background:var(--surface-2);padding:2px 6px;border-radius:4px;font-size:12px;">copilotstudio.microsoft.com</code> 접속</div></li>
+            <li><div class="step-num">2</div><div>Microsoft 365 조직 계정으로 로그인</div></li>
+            <li><div class="step-num">3</div><div>환경(Environment) 확인 — 오른쪽 상단에서 현재 환경 확인</div></li>
+            <li><div class="step-num">4</div><div>언어 설정: 설정 → 일반 → 언어를 <strong>한국어</strong>로 설정</div></li>
+            <li><div class="step-num">5</div><div>홈 화면에서 "에이전트 만들기" 버튼 확인</div></li>
+          </ul>
+          <div class="tip-box">
+            ⚠️ 라이선스 확인: Copilot Studio 사용을 위해 Power Platform 라이선스 또는 Microsoft 365 Copilot 라이선스가 필요합니다.
+          </div>
+        </div>
+        <div class="ui-screenshot">
+          <div class="screenshot-bar"></div>
+          <div class="screenshot-body">
+            <div style="font-size:11px;color:var(--text-3);margin-bottom:8px;">Copilot Studio 홈 화면</div>
+            <div style="background:linear-gradient(135deg,#0f6cbd,#5c2d91);border-radius:8px;padding:16px;color:#fff;margin-bottom:8px;">
+              <div style="font-size:14px;font-weight:700;margin-bottom:6px;">👋 환영합니다!</div>
+              <div style="font-size:11px;opacity:0.8;margin-bottom:10px;">첫 번째 에이전트를 만들어보세요</div>
+              <div style="background:rgba(255,255,255,0.2);border-radius:6px;padding:8px 12px;font-size:12px;font-weight:600;display:inline-block;">+ 에이전트 만들기</div>
+            </div>
+            <div style="display:flex;gap:6px;">
+              <div style="flex:1;background:var(--surface-2);border-radius:6px;padding:10px;font-size:11px;text-align:center;">📋<br>내 에이전트<br><strong style="color:var(--blue);">0개</strong></div>
+              <div style="flex:1;background:var(--surface-2);border-radius:6px;padding:10px;font-size:11px;text-align:center;">🌍<br>환경<br><strong style="color:var(--blue);">기본</strong></div>
+            </div>
+          </div>
+        </div>
+      </div>`,
+    files: []
+  },
+  {
+    id: 'first-agent',
+    title: '첫 번째 에이전트 만들기',
+    subtitle: 'AI 설명으로 에이전트 자동 생성 · 25분',
+    section: '3. 실습',
+    content: `
+      <div class="card-content-grid">
+        <div class="content-text">
+          <h3>🚀 에이전트 생성 두 가지 방법</h3>
+          <div style="margin:12px 0;">
+            <div style="background:var(--blue-pale);border-radius:8px;padding:12px;margin-bottom:8px;">
+              <div style="font-size:13px;font-weight:700;color:var(--blue);margin-bottom:6px;">방법 1: AI로 설명하기 (추천 ⭐)</div>
+              <div style="font-size:12px;color:var(--text-2);">"HR 질문에 답변하는 에이전트를 만들어줘"처럼 자연어로 설명하면 AI가 자동으로 구조를 생성합니다.</div>
+            </div>
+            <div style="background:var(--surface-2);border-radius:8px;padding:12px;">
+              <div style="font-size:13px;font-weight:700;margin-bottom:6px;">방법 2: 빈 에이전트로 시작</div>
+              <div style="font-size:12px;color:var(--text-2);">처음부터 직접 토픽과 흐름을 설계합니다. 세밀한 제어가 필요할 때 사용합니다.</div>
+            </div>
+          </div>
+          <h3 style="margin-top:16px;">📝 실습: FAQ 에이전트 만들기</h3>
+          <ul class="step-list">
+            <li><div class="step-num">1</div><div>Copilot Studio 홈 → <strong>에이전트 만들기</strong> 클릭</div></li>
+            <li><div class="step-num">2</div><div>설명 입력: <em>"우리 회사 직원들의 IT 지원 질문에 답변하는 에이전트"</em></div></li>
+            <li><div class="step-num">3</div><div>AI가 생성한 초안 검토 후 <strong>만들기</strong> 클릭</div></li>
+            <li><div class="step-num">4</div><div>에이전트 이름과 아이콘 설정</div></li>
+          </ul>
+        </div>
+        <div class="ui-screenshot">
+          <div class="screenshot-bar"></div>
+          <div class="screenshot-body">
+            <div style="font-size:11px;font-weight:700;margin-bottom:10px;">에이전트 만들기 화면</div>
+            <div style="border:1.5px solid var(--blue);border-radius:8px;padding:12px;margin-bottom:8px;">
+              <div style="font-size:11px;color:var(--text-3);margin-bottom:4px;">에이전트를 어떻게 설명하시겠어요?</div>
+              <div style="font-size:12px;color:var(--text);background:var(--surface-2);padding:8px;border-radius:6px;font-style:italic;">"직원들의 IT 지원 질문에 답변하는 에이전트를 만들어줘"</div>
+            </div>
+            <div style="background:var(--purple-pale);border-radius:8px;padding:10px;">
+              <div style="font-size:11px;font-weight:700;color:var(--purple);margin-bottom:6px;">✨ AI 생성 초안</div>
+              <div style="font-size:11px;color:var(--text-2);">• 비밀번호 재설정 토픽<br>• 소프트웨어 설치 안내<br>• 네트워크 연결 문제<br>• IT 티켓 생성 방법</div>
+            </div>
+          </div>
+        </div>
+      </div>`,
+    files: ['lab02_create_agent.pdf']
+  },
+  {
+    id: 'topics',
+    title: '토픽(Topics) 이해와 설계',
+    subtitle: '대화 흐름의 핵심 단위 · 25분',
+    section: '3. 실습',
+    content: `
+      <div class="card-content-grid">
+        <div class="content-text">
+          <h3>💬 토픽이란?</h3>
+          <p>토픽은 특정 사용자 의도에 맞는 대화 흐름입니다. "비밀번호를 바꾸고 싶어요" → 비밀번호 변경 토픽이 실행됩니다.</p>
+          <div class="highlight-box">
+            📌 토픽 = 사용자 의도 + 대화 흐름 + 응답 내용
+          </div>
+          <h3 style="margin-top:16px;">🔧 토픽 구성 요소</h3>
+          <ul class="step-list">
+            <li><div class="step-num">1</div><div><strong>트리거 문구</strong> — 토픽을 시작시키는 키워드/문장 (3~5개 권장)</div></li>
+            <li><div class="step-num">2</div><div><strong>메시지 노드</strong> — 에이전트가 보내는 텍스트, 이미지, 카드</div></li>
+            <li><div class="step-num">3</div><div><strong>질문 노드</strong> — 사용자에게 추가 정보 요청</div></li>
+            <li><div class="step-num">4</div><div><strong>조건 노드</strong> — if/else 분기 처리</div></li>
+            <li><div class="step-num">5</div><div><strong>종료 노드</strong> — 대화 종료 또는 다른 토픽으로 이동</div></li>
+          </ul>
+        </div>
+        <div class="ui-screenshot">
+          <div class="screenshot-bar"></div>
+          <div class="screenshot-body">
+            <div style="font-size:11px;font-weight:700;margin-bottom:10px;color:var(--purple);">토픽 편집기 (흐름도 뷰)</div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:0;">
+              <div style="background:var(--blue-pale);border:1.5px solid var(--blue);border-radius:8px;padding:8px 16px;font-size:11px;font-weight:600;color:var(--blue);width:140px;text-align:center;">🎯 트리거<br><span style="font-weight:400;color:var(--text-2);">비밀번호 변경</span></div>
+              <div style="width:2px;height:16px;background:var(--border);"></div>
+              <div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-size:11px;width:140px;text-align:center;">💬 메시지<br><span style="color:var(--text-2);">어떤 계정인가요?</span></div>
+              <div style="width:2px;height:16px;background:var(--border);"></div>
+              <div style="background:var(--purple-pale);border:1.5px solid var(--purple-light);border-radius:8px;padding:8px 16px;font-size:11px;width:140px;text-align:center;">❓ 조건 분기</div>
+              <div style="display:flex;gap:12px;margin-top:0;">
+                <div style="display:flex;flex-direction:column;align-items:center;">
+                  <div style="width:2px;height:12px;background:var(--border);"></div>
+                  <div style="background:#f0fdf4;border:1px solid #22c55e;border-radius:6px;padding:6px 10px;font-size:10px;color:#15803d;">✅ 회사 계정</div>
+                </div>
+                <div style="display:flex;flex-direction:column;align-items:center;">
+                  <div style="width:2px;height:12px;background:var(--border);"></div>
+                  <div style="background:#fef2f2;border:1px solid #ef4444;border-radius:6px;padding:6px 10px;font-size:10px;color:#dc2626;">❌ 개인 계정</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>`,
+    files: ['lab03_topic_template.xlsx']
+  },
+  {
+    id: 'knowledge',
+    title: '지식 소스 연결하기',
+    subtitle: 'SharePoint / 웹사이트 / 파일 연동 · 25분',
+    section: '3. 실습',
+    content: `
+      <div class="card-content-grid">
+        <div class="content-text">
+          <h3>📚 지식(Knowledge) 소스란?</h3>
+          <p>에이전트가 답변할 때 참조하는 데이터 저장소입니다. 생성형 AI가 이 데이터를 기반으로 자동으로 답변을 생성합니다.</p>
+          <div class="concept-grid" style="grid-template-columns:1fr 1fr;">
+            <div class="concept-card">
+              <div class="concept-icon">🌐</div>
+              <h4>공개 웹사이트</h4>
+              <p>URL 입력만으로 웹페이지 내용 자동 학습</p>
+            </div>
+            <div class="concept-card">
+              <div class="concept-icon">📁</div>
+              <h4>SharePoint</h4>
+              <p>조직 내부 문서를 안전하게 참조</p>
+            </div>
+            <div class="concept-card">
+              <div class="concept-icon">📄</div>
+              <h4>파일 업로드</h4>
+              <p>PDF, Word, PowerPoint 직접 업로드</p>
+            </div>
+            <div class="concept-card">
+              <div class="concept-icon">🔌</div>
+              <h4>Dataverse</h4>
+              <p>Power Platform 데이터베이스 연동</p>
+            </div>
+          </div>
+          <div class="tip-box" style="margin-top:12px;">
+            💡 SharePoint 사이트 URL만 입력하면 해당 사이트의 모든 문서를 자동으로 인덱싱합니다.
+          </div>
+        </div>
+        <div class="content-text">
+          <h3>🔧 SharePoint 지식 연결 순서</h3>
+          <ul class="step-list">
+            <li><div class="step-num">1</div><div>에이전트 편집 화면 → <strong>지식</strong> 탭 클릭</div></li>
+            <li><div class="step-num">2</div><div><strong>지식 추가</strong> → SharePoint 선택</div></li>
+            <li><div class="step-num">3</div><div>SharePoint 사이트 URL 또는 파일 경로 입력</div></li>
+            <li><div class="step-num">4</div><div>인덱싱 완료 확인 (몇 분 소요)</div></li>
+            <li><div class="step-num">5</div><div>테스트 패널에서 "휴가 정책이 뭐야?" 질문 테스트</div></li>
+          </ul>
+          <div class="highlight-box">
+            🔒 SharePoint 지식 소스는 에이전트를 사용하는 사용자의 권한을 그대로 적용합니다. 권한 없는 문서는 노출되지 않습니다.
+          </div>
+        </div>
+      </div>`,
+    files: ['lab04_knowledge_faq.pdf']
+  },
+  {
+    id: 'generative',
+    title: '생성형 응답 활성화 및 설정',
+    subtitle: 'AI 기반 자동 응답 품질 높이기 · 20분',
+    section: '3. 실습',
+    content: `
+      <div class="card-content-grid">
+        <div class="content-text">
+          <h3>⚡ 생성형 응답이란?</h3>
+          <p>토픽에 매핑된 질문이 아니어도, 지식 소스를 기반으로 AI가 자동으로 답변을 생성하는 기능입니다.</p>
+          <div class="highlight-box">
+            🔄 흐름: 사용자 질문 → 매칭 토픽 없음 → 지식 소스 검색 → GPT-4로 답변 생성
+          </div>
+          <h3 style="margin-top:16px;">⚙️ 설정 위치</h3>
+          <ul class="step-list">
+            <li><div class="step-num">1</div><div>에이전트 편집 → <strong>설정</strong> → <strong>생성형 AI</strong></div></li>
+            <li><div class="step-num">2</div><div><strong>생성형 응답 활성화</strong> 토글 ON</div></li>
+            <li><div class="step-num">3</div><div>콘텐츠 조정 수준 설정 (낮음/중간/높음)</div></li>
+            <li><div class="step-num">4</div><div>출처 표시 여부 선택 (권장: ON)</div></li>
+          </ul>
+        </div>
+        <div class="ui-screenshot">
+          <div class="screenshot-bar"></div>
+          <div class="screenshot-body">
+            <div style="font-size:11px;font-weight:700;margin-bottom:10px;">생성형 AI 설정 화면</div>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:10px;background:var(--surface-2);border-radius:8px;">
+                <div style="font-size:12px;font-weight:600;">생성형 응답 사용</div>
+                <div style="width:40px;height:22px;background:var(--blue);border-radius:11px;position:relative;">
+                  <div style="width:18px;height:18px;background:#fff;border-radius:50%;position:absolute;right:2px;top:2px;"></div>
+                </div>
+              </div>
+              <div style="padding:10px;background:var(--surface-2);border-radius:8px;">
+                <div style="font-size:11px;font-weight:600;margin-bottom:6px;">콘텐츠 조정 수준</div>
+                <div style="display:flex;gap:4px;">
+                  <div style="flex:1;text-align:center;padding:5px;border:1.5px solid var(--blue);border-radius:5px;font-size:10px;color:var(--blue);font-weight:600;">중간 ✓</div>
+                  <div style="flex:1;text-align:center;padding:5px;border:1px solid var(--border);border-radius:5px;font-size:10px;color:var(--text-3);">낮음</div>
+                  <div style="flex:1;text-align:center;padding:5px;border:1px solid var(--border);border-radius:5px;font-size:10px;color:var(--text-3);">높음</div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:10px;background:var(--surface-2);border-radius:8px;">
+                <div style="font-size:12px;font-weight:600;">출처 표시</div>
+                <div style="width:40px;height:22px;background:var(--blue);border-radius:11px;position:relative;">
+                  <div style="width:18px;height:18px;background:#fff;border-radius:50%;position:absolute;right:2px;top:2px;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>`,
+    files: []
+  },
+  {
+    id: 'test',
+    title: '에이전트 테스트 및 디버깅',
+    subtitle: '테스트 패널 활용법 · 20분',
+    section: '4. 테스트 & 배포',
+    content: `
+      <div class="card-content-grid">
+        <div class="content-text">
+          <h3>🧪 테스트 패널 활용</h3>
+          <p>우측 테스트 패널에서 실시간으로 에이전트와 대화하며 오류를 즉시 확인할 수 있습니다.</p>
+          <ul class="step-list">
+            <li><div class="step-num">1</div><div>우측 상단 <strong>테스트</strong> 버튼 클릭</div></li>
+            <li><div class="step-num">2</div><div>메시지 입력 → 응답 확인</div></li>
+            <li><div class="step-num">3</div><div>어떤 토픽이 실행됐는지 확인 (파란 하이라이트)</div></li>
+            <li><div class="step-num">4</div><div>오류 시 해당 노드 클릭해서 수정</div></li>
+          </ul>
+          <div class="tip-box">
+            💡 변수 값도 실시간으로 확인 가능합니다. 테스트 패널 하단의 "변수" 토글을 펼치세요.
+          </div>
+          <h3 style="margin-top:16px;">🐛 자주 발생하는 오류</h3>
+          <ul style="padding-left:16px;font-size:13px;color:var(--text-2);line-height:2;">
+            <li>토픽 트리거가 너무 짧거나 모호한 경우</li>
+            <li>조건 노드에서 변수 타입 불일치</li>
+            <li>지식 소스 인덱싱이 완료되지 않은 경우</li>
+            <li>액션 연결 권한 오류</li>
+          </ul>
+        </div>
+        <div class="ui-screenshot">
+          <div class="screenshot-bar"></div>
+          <div class="screenshot-body">
+            <div style="font-size:11px;font-weight:700;margin-bottom:8px;">테스트 패널 시뮬레이션</div>
+            <div style="background:var(--surface-2);border-radius:8px;padding:10px;min-height:150px;display:flex;flex-direction:column;gap:8px;">
+              <div style="align-self:flex-end;background:var(--blue);color:#fff;border-radius:12px 4px 12px 12px;padding:7px 11px;font-size:11px;max-width:80%;">비밀번호를 바꾸고 싶어요</div>
+              <div style="align-self:flex-start;background:#fff;border:1px solid var(--border);border-radius:4px 12px 12px 12px;padding:7px 11px;font-size:11px;max-width:85%;">어떤 계정의 비밀번호를 변경하시겠어요? 회사 계정인가요, 개인 계정인가요?</div>
+              <div style="align-self:flex-end;background:var(--blue);color:#fff;border-radius:12px 4px 12px 12px;padding:7px 11px;font-size:11px;">회사 계정이요</div>
+              <div style="align-self:flex-start;background:#fff;border:1px solid var(--border);border-radius:4px 12px 12px 12px;padding:7px 11px;font-size:11px;max-width:85%;">IT 포털(itportal.company.com)에서 비밀번호를 변경하실 수 있습니다. 도움이 필요하시면 내선 1234로 연락하세요! ✅</div>
+            </div>
+            <div style="margin-top:8px;padding:8px;background:var(--blue-pale);border-radius:6px;font-size:10px;color:var(--blue);">
+              ✅ 실행된 토픽: <strong>비밀번호 변경</strong>
+            </div>
+          </div>
+        </div>
+      </div>`,
+    files: []
+  },
+  {
+    id: 'deploy',
+    title: 'Teams에 에이전트 배포하기',
+    subtitle: 'Microsoft Teams 채널 연결 · 20분',
+    section: '4. 테스트 & 배포',
+    content: `
+      <div class="card-content-grid">
+        <div class="content-text">
+          <h3>🚀 배포 채널 선택</h3>
+          <p>Copilot Studio 에이전트는 여러 채널에 동시 배포할 수 있습니다.</p>
+          <div class="concept-grid" style="grid-template-columns:1fr 1fr;margin-bottom:16px;">
+            <div class="concept-card" style="border-color:var(--blue);">
+              <div class="concept-icon">💜</div>
+              <h4>Teams (추천)</h4>
+              <p>직원들이 이미 사용 중인 협업 도구에 바로 배포</p>
+            </div>
+            <div class="concept-card">
+              <div class="concept-icon">🌐</div>
+              <h4>웹사이트 임베드</h4>
+              <p>사내 인트라넷이나 웹사이트에 채팅창 삽입</p>
+            </div>
+          </div>
+          <h3>📋 Teams 배포 순서</h3>
+          <ul class="step-list">
+            <li><div class="step-num">1</div><div>에이전트 편집 → <strong>채널</strong> 탭 → <strong>Teams</strong> 선택</div></li>
+            <li><div class="step-num">2</div><div>Teams 앱 패키지 다운로드</div></li>
+            <li><div class="step-num">3</div><div>Teams 관리 센터 또는 Teams에서 앱 업로드</div></li>
+            <li><div class="step-num">4</div><div>특정 팀이나 채널에 앱 설치</div></li>
+            <li><div class="step-num">5</div><div>테스트 후 전체 배포</div></li>
+          </ul>
+        </div>
+        <div class="ui-screenshot">
+          <div class="screenshot-bar"></div>
+          <div class="screenshot-body">
+            <div style="font-size:11px;font-weight:700;margin-bottom:10px;">채널 선택 화면</div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <div style="display:flex;align-items:center;gap:10px;padding:10px;border:1.5px solid var(--blue);border-radius:8px;background:var(--blue-pale);">
+                <div style="font-size:20px;">💜</div>
+                <div>
+                  <div style="font-size:12px;font-weight:700;">Microsoft Teams</div>
+                  <div style="font-size:10px;color:var(--text-2);">Teams 앱으로 배포</div>
+                </div>
+                <div style="margin-left:auto;color:var(--blue);font-size:12px;">연결됨 ✅</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--border);border-radius:8px;">
+                <div style="font-size:20px;">🌐</div>
+                <div>
+                  <div style="font-size:12px;font-weight:700;">웹사이트</div>
+                  <div style="font-size:10px;color:var(--text-2);">iframe 코드 제공</div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--border);border-radius:8px;">
+                <div style="font-size:20px;">📱</div>
+                <div>
+                  <div style="font-size:12px;font-weight:700;">모바일 앱</div>
+                  <div style="font-size:10px;color:var(--text-2);">Teams 모바일 연동</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>`,
+    files: ['lab05_teams_deploy.pdf']
+  },
+  {
+    id: 'analytics',
+    title: '에이전트 분석 및 성과 측정',
+    subtitle: '대화 품질 모니터링 · 20분',
+    section: '4. 테스트 & 배포',
+    content: `
+      <div class="content-text">
+        <h3>📊 분석 대시보드 주요 지표</h3>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin:16px 0;">
+          <div style="background:var(--blue-pale);border-radius:10px;padding:14px;text-align:center;">
+            <div style="font-size:28px;font-weight:800;color:var(--blue);">87%</div>
+            <div style="font-size:12px;color:var(--text-2);margin-top:4px;">에스컬레이션 없이<br>해결된 비율</div>
+          </div>
+          <div style="background:var(--purple-pale);border-radius:10px;padding:14px;text-align:center;">
+            <div style="font-size:28px;font-weight:800;color:var(--purple);">4.2/5</div>
+            <div style="font-size:12px;color:var(--text-2);margin-top:4px;">사용자 만족도</div>
+          </div>
+          <div style="background:#f0fdf4;border-radius:10px;padding:14px;text-align:center;">
+            <div style="font-size:28px;font-weight:800;color:#16a34a;">1,247</div>
+            <div style="font-size:12px;color:var(--text-2);margin-top:4px;">이번 달 대화 수</div>
+          </div>
+          <div style="background:#fff8e1;border-radius:10px;padding:14px;text-align:center;">
+            <div style="font-size:28px;font-weight:800;color:#d97706;">23개</div>
+            <div style="font-size:12px;color:var(--text-2);margin-top:4px;">매칭 안 된 질문<br>(개선 필요)</div>
+          </div>
+        </div>
+        <div class="highlight-box">
+          🎯 "매칭 안 된 질문"(Escalated/Unmatched)을 정기적으로 확인해서 새 토픽을 추가하거나 트리거 문구를 보완하세요.
+        </div>
+        <h3 style="margin-top:16px;">📈 지속적 개선 사이클</h3>
+        <ul class="step-list">
+          <li><div class="step-num">1</div><div>주간으로 분석 탭 확인</div></li>
+          <li><div class="step-num">2</div><div>매칭되지 않은 질문 목록 검토</div></li>
+          <li><div class="step-num">3</div><div>새 토픽 추가 또는 기존 토픽 트리거 강화</div></li>
+          <li><div class="step-num">4</div><div>지식 소스 문서 업데이트 (자동 재인덱싱)</div></li>
+        </ul>
+      </div>`,
+    files: []
+  },
+  {
+    id: 'quiz',
+    title: '🎯 초급 과정 최종 퀴즈',
+    subtitle: '학습 내용 점검 · 10분',
+    section: '5. 마무리',
+    content: `
+      <div class="content-text">
+        <h3>✅ 배운 내용을 확인해봐요!</h3>
+        <p style="margin-bottom:20px;">아래 문제를 풀어보세요. 맞으면 추가 포인트를 드립니다! 🎉</p>
+        
+        <div style="margin-bottom:20px;">
+          <p style="font-size:14px;font-weight:700;margin-bottom:10px;">Q1. Copilot Studio에서 특정 사용자 의도에 맞는 대화 흐름 단위를 무엇이라 하나요?</p>
+          <div class="quiz-options" id="q1">
+            <div class="quiz-option" onclick="checkAnswer(this,'q1','b')"><span>①</span> 액션 (Action)</div>
+            <div class="quiz-option" data-correct="true" onclick="checkAnswer(this,'q1','b')"><span>②</span> 토픽 (Topic)</div>
+            <div class="quiz-option" onclick="checkAnswer(this,'q1','b')"><span>③</span> 엔티티 (Entity)</div>
+            <div class="quiz-option" onclick="checkAnswer(this,'q1','b')"><span>④</span> 지식 (Knowledge)</div>
+          </div>
+          <div class="quiz-result" id="q1-result"></div>
+        </div>
+
+        <div style="margin-bottom:20px;">
+          <p style="font-size:14px;font-weight:700;margin-bottom:10px;">Q2. Copilot Studio에서 SharePoint를 연결하는 기능은?</p>
+          <div class="quiz-options" id="q2">
+            <div class="quiz-option" onclick="checkAnswer(this,'q2','c')"><span>①</span> 액션</div>
+            <div class="quiz-option" onclick="checkAnswer(this,'q2','c')"><span>②</span> 엔티티</div>
+            <div class="quiz-option" data-correct="true" onclick="checkAnswer(this,'q2','c')"><span>③</span> 지식 (Knowledge)</div>
+            <div class="quiz-option" onclick="checkAnswer(this,'q2','c')"><span>④</span> 채널</div>
+          </div>
+          <div class="quiz-result" id="q2-result"></div>
+        </div>
+
+        <div>
+          <p style="font-size:14px;font-weight:700;margin-bottom:10px;">Q3. 토픽에 매핑되지 않은 질문을 AI가 자동으로 처리하는 기능은?</p>
+          <div class="quiz-options" id="q3">
+            <div class="quiz-option" onclick="checkAnswer(this,'q3','a')"><span>①</span> 생성형 응답 (Generative Answers)</div>
+            <div class="quiz-option" onclick="checkAnswer(this,'q3','a')"><span>②</span> 기본 토픽</div>
+            <div class="quiz-option" onclick="checkAnswer(this,'q3','a')"><span>③</span> 에스컬레이션</div>
+            <div class="quiz-option" onclick="checkAnswer(this,'q3','a')"><span>④</span> 변수 설정</div>
+          </div>
+          <div class="quiz-result" id="q3-result"></div>
+        </div>
+      </div>`,
+    files: []
+  },
+  // ─── 보너스 퀴즈 카드 (만점 달성자만 노출) ───
+  {
+    id: 'bonus-quiz',
+    title: '🏆 보너스 퀴즈 — 선착순 순위 도전!',
+    subtitle: '10문제 전부 맞히면 순위에 등록됩니다 · 15분',
+    section: '6. 보너스 퀴즈',
+    bonus: true,
+    content: `
+      <div class="content-text">
+        <div style="text-align:center;padding:16px 0 20px;">
+          <div style="font-size:40px;margin-bottom:8px;">🏆</div>
+          <div style="font-size:18px;font-weight:800;color:var(--blue);margin-bottom:4px;">선착순 순위 도전!</div>
+          <div style="font-size:13px;color:var(--text-2);">10문제를 모두 맞히면 완료 시간 기준으로 순위에 등록됩니다.<br>만점을 받아야 1~10위 순위에 들어갈 수 있습니다.</div>
+        </div>
+
+        <!-- Q1 -->
+        <p style="font-size:14px;font-weight:700;margin:16px 0 8px;">Q1. Copilot Studio에서 외부 시스템을 연동하거나 Power Automate를 실행하는 기능은?</p>
+        <div class="quiz-options" id="bq1">
+          <div class="quiz-option" onclick="checkAnswer(this,'bq1')"><span>①</span> Actions (액션)</div>
+          <div class="quiz-option" onclick="checkAnswer(this,'bq1')"><span>②</span> Topics (토픽)</div>
+          <div class="quiz-option" onclick="checkAnswer(this,'bq1')"><span>③</span> Entities (엔티티)</div>
+          <div class="quiz-option" onclick="checkAnswer(this,'bq1')"><span>④</span> Channels (채널)</div>
+        </div>
+        <div class="quiz-result" id="bq1-result"></div>
+
+        <!-- Q2 -->
+        <p style="font-size:14px;font-weight:700;margin:16px 0 8px;">Q2. 에이전트를 배포할 수 있는 Microsoft 협업 도구는?</p>
+        <div class="quiz-options" id="bq2">
+          <div class="quiz-option" onclick="checkAnswer(this,'bq2')"><span>①</span> SharePoint</div>
+          <div class="quiz-option" onclick="checkAnswer(this,'bq2')"><span>②</span> Microsoft Teams</div>
+          <div class="quiz-option" onclick="checkAnswer(this,'bq2')"><span>③</span> Outlook</div>
+          <div class="quiz-option" onclick="checkAnswer(this,'bq2')"><span>④</span> OneDrive</div>
+        </div>
+        <div class="quiz-result" id="bq2-result"></div>
+
+        <!-- Q3 -->
+        <p style="font-size:14px;font-weight:700;margin:16px 0 8px;">Q3. 사용자 입력에서 날짜, 이름 등의 정보를 추출하는 Copilot Studio 구성요소는?</p>
+        <div class="quiz-options" id="bq3">
+          <div class="quiz-option" onclick="checkAnswer(this,'bq3')"><span>①</span> Topics</div>
+          <div class="quiz-option" onclick="checkAnswer(this,'bq3')"><span>②</span> Actions</div>
+          <div class="quiz-option" onclick="checkAnswer(this,'bq3')"><span>③</span> Entities (엔티티)</div>
+          <div class="quiz-option" onclick="checkAnswer(this,'bq3')"><span>④</span> Knowledge</div>
+        </div>
+        <div class="quiz-result" id="bq3-result"></div>
+
+        <!-- Q4 -->
+        <p style="font-size:14px;font-weight:700;margin:16px 0 8px;">Q4. Copilot Studio 분석 대시보드에서 "매칭 안 된 질문"을 확인하는 주된 목적은?</p>
+        <div class="quiz-options" id="bq4">
+          <div class="quiz-option" onclick="checkAnswer(this,'bq4')"><span>①</span> 새 토픽 추가 또는 기존 트리거 문구 보완</div>
+          <div class="quiz-option" onclick="checkAnswer(this,'bq4')"><span>②</span> 에이전트 삭제 여부 판단</div>
+          <div class="quiz-option" onclick="checkAnswer(this,'bq4')"><span>③</span> 채널 변경</div>
+          <div class="quiz-option" onclick="checkAnswer(this,'bq4')"><span>④</span> 라이선스 갱신</div>
+        </div>
+        <div class="quiz-result" id="bq4-result"></div>
+
+        <!-- Q5 -->
+        <p style="font-size:14px;font-weight:700;margin:16px 0 8px;">Q5. Copilot Studio에서 SharePoint 문서를 에이전트가 답변에 활용하도록 연결하는 기능은?</p>
+        <div class="quiz-options" id="bq5">
+          <div class="quiz-option" onclick="checkAnswer(this,'bq5')"><span>①</span> Actions</div>
+          <div class="quiz-option" onclick="checkAnswer(this,'bq5')"><span>②</span> Knowledge (지식)</div>
+          <div class="quiz-option" onclick="checkAnswer(this,'bq5')"><span>③</span> Entities</div>
+          <div class="quiz-option" onclick="checkAnswer(this,'bq5')"><span>④</span> Topics</div>
+        </div>
+        <div class="quiz-result" id="bq5-result"></div>
+
+        <!-- Q6 -->
+        <p style="font-size:14px;font-weight:700;margin:16px 0 8px;">Q6. Copilot Studio 테스트 패널에서 어떤 토픽이 실행됐는지 확인하는 방법은?</p>
+        <div class="quiz-options" id="bq6">
+          <div class="quiz-option" onclick="checkAnswer(this,'bq6')"><span>①</span> 분석 탭 확인</div>
+          <div class="quiz-option" onclick="checkAnswer(this,'bq6')"><span>②</span> 채널 설정 확인</div>
+          <div class="quiz-option" onclick="checkAnswer(this,'bq6')"><span>③</span> 실행된 노드가 파란 하이라이트로 표시됨</div>
+          <div class="quiz-option" onclick="checkAnswer(this,'bq6')"><span>④</span> 에이전트를 재시작</div>
+        </div>
+        <div class="quiz-result" id="bq6-result"></div>
+
+        <!-- Q7 -->
+        <p style="font-size:14px;font-weight:700;margin:16px 0 8px;">Q7. 토픽에서 if/else 분기를 처리하는 노드는?</p>
+        <div class="quiz-options" id="bq7">
+          <div class="quiz-option" onclick="checkAnswer(this,'bq7')"><span>①</span> 조건 노드</div>
+          <div class="quiz-option" onclick="checkAnswer(this,'bq7')"><span>②</span> 메시지 노드</div>
+          <div class="quiz-option" onclick="checkAnswer(this,'bq7')"><span>③</span> 액션 노드</div>
+          <div class="quiz-option" onclick="checkAnswer(this,'bq7')"><span>④</span> 트리거 노드</div>
+        </div>
+        <div class="quiz-result" id="bq7-result"></div>
+
+        <!-- Q8 -->
+        <p style="font-size:14px;font-weight:700;margin:16px 0 8px;">Q8. Copilot Studio에서 에이전트를 처음 만들 때 권장하는 방식은?</p>
+        <div class="quiz-options" id="bq8">
+          <div class="quiz-option" onclick="checkAnswer(this,'bq8')"><span>①</span> 빈 에이전트에서 직접 모든 토픽 수작업</div>
+          <div class="quiz-option" onclick="checkAnswer(this,'bq8')"><span>②</span> AI에게 에이전트 목적을 설명하면 자동 생성</div>
+          <div class="quiz-option" onclick="checkAnswer(this,'bq8')"><span>③</span> Power Automate에서 먼저 흐름 생성 후 연결</div>
+          <div class="quiz-option" onclick="checkAnswer(this,'bq8')"><span>④</span> SharePoint에서 에이전트 생성 후 가져오기</div>
+        </div>
+        <div class="quiz-result" id="bq8-result"></div>
+
+        <!-- Q9 -->
+        <p style="font-size:14px;font-weight:700;margin:16px 0 8px;">Q9. Copilot Studio에서 생성형 응답(Generative Answers)을 활성화하는 위치는?</p>
+        <div class="quiz-options" id="bq9">
+          <div class="quiz-option" onclick="checkAnswer(this,'bq9')"><span>①</span> 채널 탭</div>
+          <div class="quiz-option" onclick="checkAnswer(this,'bq9')"><span>②</span> 지식 탭</div>
+          <div class="quiz-option" onclick="checkAnswer(this,'bq9')"><span>③</span> 액션 탭</div>
+          <div class="quiz-option" onclick="checkAnswer(this,'bq9')"><span>④</span> 설정 → 생성형 AI 탭</div>
+        </div>
+        <div class="quiz-result" id="bq9-result"></div>
+
+        <!-- Q10 -->
+        <p style="font-size:14px;font-weight:700;margin:16px 0 8px;">Q10. Microsoft Teams에 에이전트를 배포할 때 다운로드하는 파일 형식은?</p>
+        <div class="quiz-options" id="bq10">
+          <div class="quiz-option" onclick="checkAnswer(this,'bq10')"><span>①</span> .exe</div>
+          <div class="quiz-option" onclick="checkAnswer(this,'bq10')"><span>②</span> .pdf</div>
+          <div class="quiz-option" onclick="checkAnswer(this,'bq10')"><span>③</span> .zip (앱 패키지)</div>
+          <div class="quiz-option" onclick="checkAnswer(this,'bq10')"><span>④</span> .msi</div>
+        </div>
+        <div class="quiz-result" id="bq10-result"></div>
+
+        <!-- 완료 결과 영역 -->
+        <div id="bonus-result"></div>
+      </div>`,
+    files: []
+  }
+];
+
+// 정답 처리
+// 기본 퀴즈 (카드 12): Q1=1, Q2=2, Q3=0
+// 보너스 퀴즈 (카드 13): bq1~bq10
+const ANSWERS = {
+  q1:1, q2:2, q3:0,
+  bq1:0, bq2:1, bq3:2, bq4:0, bq5:1,
+  bq6:2, bq7:0, bq8:1, bq9:3, bq10:2
+};
+
+// 보너스 퀴즈 해금 기준: 125pt (카드 12장×10=120 + 퀴즈 1문제 이상 정답)
+const MAX_NORMAL_POINTS = 125;
+let bonusQuizCorrect = 0; // 보너스 퀴즈 정답 수
+let bonusQuizAnswered = 0; // 보너스 퀴즈 응답 수
+let bonusCompleted = false; // 보너스 퀴즈 완료 여부
+
+function checkAnswer(el, qid, _) {
+  const container = document.getElementById(qid);
+  if (container.classList.contains('answered')) return;
+  container.classList.add('answered');
+
+  const options = container.querySelectorAll('.quiz-option');
+  const clickedIdx = Array.from(options).indexOf(el);
+  const correctIdx = ANSWERS[qid];
+
+  options.forEach((opt, i) => {
+    opt.style.pointerEvents = 'none';
+    if (i === correctIdx) opt.classList.add('correct');
+    else if (i === clickedIdx && clickedIdx !== correctIdx) opt.classList.add('wrong');
+  });
+
+  const resultEl = document.getElementById(qid + '-result');
+  resultEl.classList.add('show');
+  const isBonus = qid.startsWith('bq');
+  const isCorrect = clickedIdx === correctIdx;
+
+  if (isCorrect) {
+    resultEl.textContent = '✅ 정답입니다! 훌륭해요!';
+    resultEl.classList.add('correct');
+    addPoints(isBonus ? 10 : 5, isBonus ? '보너스 퀴즈 정답' : '퀴즈 정답');
+    if (isBonus) bonusQuizCorrect++;
+  } else {
+    resultEl.textContent = '❌ 오답입니다. 다시 학습해보세요!';
+    resultEl.classList.add('wrong');
+  }
+
+  if (isBonus) {
+    bonusQuizAnswered++;
+    // 10문제 모두 응답 시 완료 처리
+    if (bonusQuizAnswered === 10 && !bonusCompleted) {
+      bonusCompleted = true;
+      setTimeout(() => finishBonusQuiz(), 600);
+    }
+  }
+}
+
+async function finishBonusQuiz() {
+  const perfect = bonusQuizCorrect === 10;
+  const rank = perfect ? await saveBonusRanking() : null;
+
+  const resultDiv = document.getElementById('bonus-result');
+  if (!resultDiv) return;
+
+  if (perfect) {
+    const medals = ['🥇','🥈','🥉'];
+    const medal  = rank <= 3 ? medals[rank-1] : `🏅${rank}위`;
+    resultDiv.innerHTML = `
+      <div style="text-align:center;padding:20px;background:linear-gradient(135deg,#fdf6e3,#fff8e1);border:2px solid #e8d080;border-radius:14px;margin-top:16px;">
+        <div style="font-size:52px;margin-bottom:8px;">${medal}</div>
+        <div style="font-size:20px;font-weight:800;color:#8a6a00;margin-bottom:6px;">10문제 만점! ${rank}위 달성!</div>
+        <div style="font-size:13px;color:var(--text-2);">전체 과정 + 보너스 퀴즈 완료 🎉<br>총 포인트: <strong>${totalPoints} pt</strong></div>
+      </div>`;
+  } else {
+    resultDiv.innerHTML = `
+      <div style="text-align:center;padding:16px;background:var(--surface-2);border-radius:12px;margin-top:16px;">
+        <div style="font-size:32px;margin-bottom:6px;">📊</div>
+        <div style="font-size:16px;font-weight:700;margin-bottom:4px;">${bonusQuizCorrect}/10 정답</div>
+        <div style="font-size:13px;color:var(--text-2);">만점(10/10)을 받아야 순위에 등록됩니다. 다시 도전하려면 페이지를 새로고침하세요.</div>
+      </div>`;
+  }
+}
+
+async function saveBonusRanking() {
+  if (!currentUser) return 999;
+  try {
+    // 이미 등록된 경우 순위만 반환
+    const { data: existing } = await sb.from('edu_bonus_ranking')
+      .select('rank').eq('user_id', currentUser.user_id).single();
+    if (existing) return existing.rank;
+
+    // 현재 등록 수 확인 → 순위 결정
+    const { count } = await sb.from('edu_bonus_ranking')
+      .select('*', { count:'exact', head:true });
+    const myRank = (count || 0) + 1;
+
+    await sb.from('edu_bonus_ranking').insert({
+      user_id: currentUser.user_id,
+      display_name: currentUser.display_name,
+      avatar_color: currentUser.avatar_color,
+      total_points: totalPoints,
+      rank: myRank,
+      completed_at: new Date().toISOString()
+    });
+    return myRank;
+  } catch(e) { console.error(e); return 999; }
+}
+
+// ─────────────────────────────────────
+// 초기화
+// ─────────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  // Enter키 로그인
+  document.getElementById('login-name').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('login-pw').focus();
+  });
+  document.getElementById('login-pw').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doLogin();
+  });
+
+  // 드래그앤드롭
+  setupDragDrop();
+
+  // 붙여넣기
+  document.addEventListener('paste', handlePaste);
+});
+
+// ─────────────────────────────────────
+// 로그인
+// ─────────────────────────────────────
+async function doLogin() {
+  const name = document.getElementById('login-name').value.trim();
+  const pw   = document.getElementById('login-pw').value;
+  const err  = document.getElementById('login-error');
+  err.textContent = '';
+
+  if (name.length < 2 || name.length > 12) {
+    err.textContent = '닉네임은 2~12자로 입력해주세요.'; return;
+  }
+  if (pw.length < 2) {
+    err.textContent = '비밀번호를 입력해주세요.'; return;
+  }
+
+  const btn = document.querySelector('.login-btn');
+  btn.disabled = true;
+  btn.textContent = '확인 중...';
+
+  try {
+    const { data: existing } = await sb.from('edu_sessions')
+      .select('user_id, password, last_seen')
+      .eq('user_id', name)
+      .single();
+
+    if (existing) {
+      // 비밀번호 확인
+      if (existing.password !== pw) {
+        err.textContent = '❌ 비밀번호가 올바르지 않습니다.';
+        btn.disabled = false; btn.textContent = '🚀 학습 시작하기'; return;
+      }
+      // 10초 이내 last_seen → 다른 곳에서 현재 사용 중
+      const diffSec = (Date.now() - new Date(existing.last_seen).getTime()) / 1000;
+      if (diffSec < 10) {
+        err.textContent = '⚠️ 이미 다른 곳에서 접속 중입니다. 기존 창을 닫고 다시 시도해주세요.';
+        btn.disabled = false; btn.textContent = '🚀 학습 시작하기'; return;
+      }
+      // 10초 이상 비활성 → 접속 허용
+      await sb.from('edu_sessions').update({
+        last_seen: new Date().toISOString(), page_id: PAGE_ID
+      }).eq('user_id', name);
+
+    } else {
+      // 신규 닉네임 → 계정 생성
+      const color = COLORS[Math.floor(Math.random() * COLORS.length)];
+      const { error: insertErr } = await sb.from('edu_sessions').insert({
+        user_id: name, display_name: name, password: pw,
+        avatar_color: color, page_id: PAGE_ID,
+        total_points: 0, current_card: 0
+      });
+      if (insertErr) throw insertErr;
+    }
+
+    // 진행률 로드
+    const { data: progress } = await sb.from('edu_progress')
+      .select('card_index, points_earned')
+      .eq('user_id', name).eq('page_id', PAGE_ID);
+
+    const { data: session } = await sb.from('edu_sessions')
+      .select('*').eq('user_id', name).single();
+
+    currentUser = session;
+    progress?.forEach(p => {
+      completedCards.add(p.card_index);
+      totalPoints += p.points_earned;
+    });
+
+    initUI();
+    document.getElementById('login-overlay').style.display = 'none';
+    startHeartbeat();
+    subscribeRealtime();
+
+  } catch(e) {
+    err.textContent = '연결 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+    console.error(e);
+    btn.disabled = false; btn.textContent = '🚀 학습 시작하기';
+  }
+}
+
+function initUI() {
+  document.getElementById('header').style.display = 'flex';
+  document.getElementById('main-layout').style.display = 'flex';
+  
+  // 사용자 아바타 & 이름
+  const avatar = document.getElementById('user-avatar');
+  avatar.style.background = currentUser.avatar_color;
+  avatar.textContent = currentUser.display_name[0].toUpperCase();
+  document.getElementById('user-name-display').textContent = currentUser.display_name;
+  
+  // 포인트
+  updatePointsDisplay(totalPoints);
+  
+  // 카드 렌더링
+  renderTOC();
+  renderCards();
+  
+  // 저장된 카드 위치로 이동
+  goToCard(currentUser.current_card || 0, false);
+  
+  // 진행률 업데이트
+  updateProgress();
+}
+
+// ─────────────────────────────────────
+// 카드 렌더링
+// ─────────────────────────────────────
+function renderTOC() {
+  const toc = document.getElementById('toc-nav');
+  const sections = [...new Set(CARDS.map(c => c.section))];
+  sections.forEach((sec, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'toc-btn';
+    btn.textContent = sec;
+    btn.dataset.section = sec;
+    btn.onclick = () => {
+      const cardIdx = CARDS.findIndex(c => c.section === sec);
+      goToCard(cardIdx);
+    };
+    toc.appendChild(btn);
+  });
+}
+
+function renderCards() {
+  const container = document.getElementById('card-container');
+  container.innerHTML = '';
+  
+  CARDS.forEach((card, idx) => {
+    const el = document.createElement('div');
+    const isBonus = card.bonus === true;
+    el.className = 'edu-card' + (idx === 0 ? ' active' : '') + (isBonus ? ' bonus-card-hidden' : '');
+    el.id = `card-${idx}`;
+    el.innerHTML = `
+      <div class="card-header">
+        <div class="card-number">${card.section} · 카드 ${idx+1}/${CARDS.length}</div>
+        <div class="card-title">${card.title}</div>
+        <div class="card-subtitle">⏱ ${card.subtitle}</div>
+      </div>
+      <div class="card-body">
+        ${card.content}
+        ${card.files.length > 0 ? `
+          <div class="file-download-area">
+            <h4>📂 실습 파일 다운로드</h4>
+            ${card.files.map(f => `
+              <button class="download-btn" onclick="downloadFile('./files/${f}','${f}')">
+                📄 ${f}
+              </button>
+            `).join('')}
+          </div>
+        ` : ''}
+      </div>
+      <div class="card-footer">
+        <span class="card-counter">${card.bonus ? '보너스' : (idx+1) + ' / ' + CARDS.filter(c=>!c.bonus).length}</span>
+        <div class="nav-btns">
+          ${idx > 0 ? `<button class="nav-btn prev" onclick="goToCard(${idx-1})">← 이전</button>` : ''}
+          ${card.bonus
+            ? '' // 보너스 카드는 네비 버튼 없음
+            : (CARDS[idx+1] && !CARDS[idx+1].bonus)
+              ? `<button class="nav-btn next" onclick="nextCard(${idx})">다음 →</button>`
+              : `<button class="nav-btn next" onclick="completeAll()">🎉 과정 완료!</button>`
+          }
+        </div>
+      </div>`;
+    container.appendChild(el);
+  });
+}
+
+function goToCard(idx, animate = true) {
+  if (idx < 0 || idx >= CARDS.length) return;
+  // 보너스 카드가 아직 잠겨있으면 이동 차단
+  const targetCard = CARDS[idx];
+  if (targetCard?.bonus) {
+    const el = document.getElementById(`card-${idx}`);
+    if (el && el.classList.contains('bonus-card-hidden')) return;
+  }
+
+  const prev = document.querySelector('.edu-card.active');
+  if (prev) prev.classList.remove('active');
+
+  const next = document.getElementById(`card-${idx}`);
+  next.classList.add('active');
+  if (animate && idx < currentCard) next.classList.add('slide-back');
+  else next.classList.remove('slide-back');
+  
+  currentCard = idx;
+  updateTOC();
+  scrollToCards();
+  
+  // 세션 업데이트
+  if (currentUser) {
+    sb.from('edu_sessions').update({ current_card: idx, page_id: PAGE_ID, last_seen: new Date().toISOString() })
+      .eq('user_id', currentUser.user_id).then(() => {});
+  }
+}
+
+function nextCard(idx) {
+  if (!completedCards.has(idx)) {
+    completedCards.add(idx);
+    addPoints(POINTS_PER_CARD, '카드 완료');
+    saveProgress(idx);
+  }
+  goToCard(idx + 1);
+}
+
+function updateTOC() {
+  const sections = document.querySelectorAll('.toc-btn');
+  const currentSection = CARDS[currentCard]?.section;
+  sections.forEach(btn => {
+    btn.classList.remove('active');
+    const sectionCards = CARDS.filter(c => c.section === btn.dataset.section);
+    const allDone = sectionCards.every((c, i) => completedCards.has(CARDS.indexOf(c)));
+    if (allDone) btn.classList.add('done');
+    if (btn.dataset.section === currentSection) btn.classList.add('active');
+  });
+}
+
+function scrollToCards() {
+  document.getElementById('card-container').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ─────────────────────────────────────
+// 포인트 & 진행률
+// ─────────────────────────────────────
+async function addPoints(amount, reason) {
+  totalPoints += amount;
+  updatePointsDisplay(totalPoints);
+  updateProgress();
+  showPointPopup(amount);
+  
+  if (currentUser) {
+    await sb.from('edu_sessions')
+      .update({ total_points: totalPoints })
+      .eq('user_id', currentUser.user_id);
+  }
+}
+
+function updatePointsDisplay(pts) {
+  const el = document.getElementById('points-value');
+  const display = document.getElementById('points-display');
+  
+  // 숫자 카운트업 애니메이션
+  const from = parseInt(el.textContent) || 0;
+  const diff = pts - from;
+  if (diff <= 0) { el.textContent = pts; return; }
+  
+  let start = null;
+  const duration = 600;
+  function step(ts) {
+    if (!start) start = ts;
+    const progress = Math.min((ts - start) / duration, 1);
+    el.textContent = Math.round(from + diff * progress);
+    if (progress < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+  
+  display.classList.add('bump');
+  setTimeout(() => display.classList.remove('bump'), 500);
+}
+
+function updateProgress() {
+  const normalTotal = CARDS.filter(c => !c.bonus).length;
+  const normalDone  = [...completedCards].filter(i => !CARDS[i]?.bonus).length;
+  const pct = Math.round((normalDone / normalTotal) * 100);
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-pct').textContent = pct + '%';
+  updateTOC();
+}
+
+async function saveProgress(cardIdx) {
+  if (!currentUser) return;
+  await sb.from('edu_progress').upsert({
+    user_id: currentUser.user_id,
+    page_id: PAGE_ID,
+    card_index: cardIdx,
+    points_earned: POINTS_PER_CARD
+  }, { onConflict: 'user_id,page_id,card_index' });
+}
+
+function showPointPopup(amount) {
+  const popup = document.getElementById('point-popup');
+  popup.textContent = `🎉 +${amount} 포인트!`;
+  popup.classList.add('show');
+  setTimeout(() => popup.classList.remove('show'), 2500);
+}
+
+// ─────────────────────────────────────
+// 완료
+// ─────────────────────────────────────
+function completeAll() {
+  // 일반 과정의 마지막 카드 = CARDS에서 bonus가 아닌 마지막
+  const normalCards = CARDS.filter(c => !c.bonus);
+  const lastNormalIdx = CARDS.indexOf(normalCards[normalCards.length - 1]);
+
+  if (!completedCards.has(lastNormalIdx)) {
+    completedCards.add(lastNormalIdx);
+    addPoints(POINTS_PER_CARD, '최종 카드');
+    saveProgress(lastNormalIdx);
+  }
+
+  // 만점 여부 확인 (일반 카드 12장 × 10 + 기본 퀴즈 3 × 5 = 135pt)
+  const isPerfect = totalPoints >= MAX_NORMAL_POINTS;
+  const bonusCardEl = document.querySelector('.bonus-card-hidden');
+
+  if (isPerfect && bonusCardEl) {
+    // 만점 → 보너스 퀴즈 카드 공개
+    bonusCardEl.classList.remove('bonus-card-hidden');
+    bonusCardEl.classList.add('bonus-visible');
+
+    // TOC에 보너스 탭 추가
+    const toc = document.getElementById('toc-nav');
+    if (!toc.querySelector('[data-section="6. 보너스 퀴즈"]')) {
+      const btn = document.createElement('button');
+      btn.className = 'toc-btn';
+      btn.textContent = '🏆 보너스 퀴즈';
+      btn.dataset.section = '6. 보너스 퀴즈';
+      btn.onclick = () => goToCard(CARDS.length - 1);
+      toc.appendChild(btn);
+    }
+
+    // 완료 화면 (만점 + 보너스 안내)
+    showCompletionBanner(true);
+    // 보너스 카드로 이동
+    setTimeout(() => goToCard(CARDS.length - 1), 800);
+  } else {
+    showCompletionBanner(false);
+  }
+}
+
+function showCompletionBanner(hasBonusUnlock) {
+  // 카드 컨테이너 위에 배너 삽입 (카드는 유지)
+  const existing = document.getElementById('completion-banner');
+  if (existing) return;
+
+  const banner = document.createElement('div');
+  banner.id = 'completion-banner';
+  banner.style.marginBottom = '20px';
+
+  if (hasBonusUnlock) {
+    banner.innerHTML = `
+      <div style="background:linear-gradient(135deg,#fdf6e3,#fff8e1);border:2px solid #e8d080;border-radius:16px;padding:28px;text-align:center;">
+        <div style="font-size:48px;margin-bottom:10px;">🎉</div>
+        <h2 style="font-size:22px;font-weight:800;color:#8a6a00;margin-bottom:6px;">만점 달성! 보너스 퀴즈 해금!</h2>
+        <p style="color:var(--text-2);font-size:14px;margin-bottom:16px;">초급 과정을 완벽하게 완료했습니다!<br>🏆 보너스 퀴즈 10문제에 도전해 선착순 순위에 등록하세요!</p>
+        <div style="display:inline-flex;align-items:center;gap:8px;background:var(--gold-pale);border:1.5px solid #e8d080;border-radius:24px;padding:10px 24px;font-size:18px;font-weight:800;color:#8a6a00;">
+          🪙 ${totalPoints} pt
+        </div>
+      </div>`;
+  } else {
+    banner.innerHTML = `
+      <div class="completion-card">
+        <div class="completion-emoji">🎓</div>
+        <h2>초급 과정 완료!</h2>
+        <p>Copilot Studio 초급 과정을 모두 마치셨습니다.<br>카드 12개를 모두 완료(${MAX_NORMAL_POINTS}pt 이상)하면 🏆 보너스 퀴즈에 도전할 수 있습니다!</p>
+        <div class="final-points">🪙 총 획득 포인트: ${totalPoints} pt / ${MAX_NORMAL_POINTS} pt</div>
+        <div style="font-size:13px;color:var(--text-2);margin-bottom:20px;">현재 점수로는 보너스 퀴즈에 참여할 수 없습니다. 놓친 카드나 퀴즈를 다시 확인해보세요.</div>
+        <div class="action-btns">
+          <button class="action-btn secondary" onclick="location.reload()">🔄 다시 학습하기</button>
+          <button class="action-btn primary" onclick="alert('중급 과정 준비 중입니다! 🚀')">중급 과정 → 준비 중</button>
+        </div>
+      </div>`;
+  }
+
+  const cardsSection = document.querySelector('.cards-section');
+  cardsSection.insertBefore(banner, cardsSection.firstChild);
+  banner.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ─────────────────────────────────────
+// 로그아웃
+// ─────────────────────────────────────
+function showFileToast(msg, type='error') {
+  let t = document.getElementById('file-toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'file-toast';
+    t.style.cssText = 'position:fixed;bottom:30px;left:50%;transform:translateX(-50%);padding:12px 24px;border-radius:10px;font-size:14px;font-weight:600;z-index:9999;opacity:0;transition:opacity 0.3s;pointer-events:none;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,0.2);';
+    document.body.appendChild(t);
+  }
+  const colors = { error:'#dc2626', success:'#16a34a', info:'#0f6cbd' };
+  t.style.background = colors[type] || '#dc2626';
+  t.style.color = '#fff';
+  t.textContent = msg;
+  t.style.opacity = '1';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.style.opacity = '0'; }, 4000);
+}
+
+async function downloadFile(url, filename) {
+  try {
+    const isPdf = filename.toLowerCase().endsWith('.pdf');
+    if (isPdf) {
+      // PDF는 새 탭에서 바로 열기
+      const w = window.open(url, '_blank');
+      if (!w) showFileToast('❌ 팝업이 차단됐습니다. 브라우저 팝업 허용 후 다시 시도하세요.');
+      return;
+    }
+    // xlsx 등 다운로드 파일 — fetch로 가져와서 저장
+    showFileToast('⏳ 파일 다운로드 중...', 'info');
+    const res = await fetch(url);
+    if (!res.ok) {
+      showFileToast('❌ 파일을 찾을 수 없습니다. (files/ 폴더 업로드 확인)');
+      return;
+    }
+    const blob = await res.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+    showFileToast('✅ 다운로드 완료!', 'success');
+  } catch(e) {
+    showFileToast('❌ 파일 열기 실패: ' + e.message);
+  }
+}
+
+async function doLogout() {
+  if (!currentUser) return;
+  await sb.from('edu_sessions').delete().eq('user_id', currentUser.user_id);
+  if (chatChannel) sb.removeChannel(chatChannel);
+  if (sessionChannel) sb.removeChannel(sessionChannel);
+  location.reload();
+}
+
+// ─────────────────────────────────────
+// 하트비트 (세션 유지)
+// ─────────────────────────────────────
+function startHeartbeat() {
+  setInterval(async () => {
+    if (!currentUser) return;
+    await sb.from('edu_sessions')
+      .update({ last_seen: new Date().toISOString() })
+      .eq('user_id', currentUser.user_id);
+  }, 6000); // 6초마다 (10초 중복 체크 대응)
+}
+
+// ─────────────────────────────────────
+// 실시간 구독
+// ─────────────────────────────────────
+function subscribeRealtime() {
+  // 채팅 구독
+  chatChannel = sb.channel(`chat:${PAGE_ID}`)
+    .on('postgres_changes', {
+      event: 'INSERT', schema: 'public', table: 'edu_chat',
+      filter: `page_id=eq.${PAGE_ID}`
+    }, payload => {
+      const msg = payload.new;
+      appendChatMessage(msg);
+      if (!chatOpen) {
+        unreadCount++;
+        const badge = document.getElementById('chat-badge');
+        badge.style.display = 'flex';
+        badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+      }
+    })
+    .subscribe();
+  
+  // 세션 구독 (온라인 유저 목록)
+  sessionChannel = sb.channel(`sessions:${PAGE_ID}`)
+    .on('postgres_changes', {
+      event: '*', schema: 'public', table: 'edu_sessions',
+      filter: `page_id=eq.${PAGE_ID}`
+    }, () => { loadOnlineUsers(); })
+    .subscribe();
+  
+  // 초기 로드
+  loadOnlineUsers();
+  loadRecentChats();
+}
+
+async function loadOnlineUsers() {
+  const { data } = await sb.from('edu_sessions')
+    .select('*')
+    .eq('page_id', PAGE_ID)
+    .gte('last_seen', new Date(Date.now() - 30*60*1000).toISOString());
+  
+  onlineUsers = data || [];
+  renderOnlineUsers();
+}
+
+function renderOnlineUsers() {
+  const count = onlineUsers.length;
+  document.getElementById('online-count').textContent = `(${count}명)`;
+  
+  const list = document.getElementById('chat-online-list');
+  list.innerHTML = onlineUsers.map(u => `
+    <div class="online-pill">
+      <div class="online-avatar" style="background:${u.avatar_color}">${u.display_name[0]}</div>
+      ${u.display_name}
+    </div>
+  `).join('');
+}
+
+async function loadRecentChats() {
+  const { data } = await sb.from('edu_chat')
+    .select('*')
+    .eq('page_id', PAGE_ID)
+    .order('created_at', { ascending: true })
+    .limit(50);
+  
+  if (data?.length) {
+    document.getElementById('chat-messages').innerHTML = '';
+    data.forEach(msg => appendChatMessage(msg));
+  }
+}
+
+// ─────────────────────────────────────
+// 채팅
+// ─────────────────────────────────────
+function toggleChat() {
+  const panel = document.getElementById('chat-panel');
+  chatOpen = !chatOpen;
+  panel.classList.toggle('open', chatOpen);
+  if (chatOpen) {
+    unreadCount = 0;
+    const badge = document.getElementById('chat-badge');
+    badge.style.display = 'none';
+    scrollChatToBottom();
+  }
+}
+
+async function sendMessage() {
+  if (!currentUser) return;
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  
+  input.value = '';
+  input.style.height = 'auto';
+  
+  await sb.from('edu_chat').insert({
+    page_id: PAGE_ID,
+    user_id: currentUser.user_id,
+    display_name: currentUser.display_name,
+    avatar_color: currentUser.avatar_color,
+    message: text
+  });
+}
+
+function handleChatKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+}
+
+function appendChatMessage(msg) {
+  const container = document.getElementById('chat-messages');
+  const isMe = currentUser && msg.user_id === currentUser.user_id;
+  
+  const time = new Date(msg.created_at).toLocaleTimeString('ko-KR', { hour:'2-digit', minute:'2-digit' });
+  
+  const el = document.createElement('div');
+  el.className = 'chat-msg' + (isMe ? ' mine' : '');
+  
+  let content = '';
+  if (msg.message) {
+    content += `<div class="msg-bubble">${escapeHtml(msg.message)}</div>`;
+  }
+  if (msg.file_url) {
+    if (msg.file_type === 'image') {
+      content += `<img src="${msg.file_url}" class="msg-image" onclick="window.open('${msg.file_url}')">`;
+    } else {
+      content += `<a href="${msg.file_url}" target="_blank" class="msg-file">📎 ${escapeHtml(msg.file_name || '파일')}</a>`;
+    }
+  }
+  
+  el.innerHTML = `
+    <div class="msg-meta">
+      <div class="msg-avatar" style="background:${msg.avatar_color}">${msg.display_name[0]}</div>
+      ${escapeHtml(msg.display_name)} · ${time}
+    </div>
+    ${content}`;
+  
+  container.appendChild(el);
+  scrollChatToBottom();
+}
+
+function scrollChatToBottom() {
+  const c = document.getElementById('chat-messages');
+  c.scrollTop = c.scrollHeight;
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─────────────────────────────────────
+// 파일 업로드 (드래그&드롭, 첨부버튼, 붙여넣기)
+// ─────────────────────────────────────
+async function uploadAndSendFile(file) {
+  if (!currentUser || !file) return;
+  
+  const isImage = file.type.startsWith('image/');
+  const ext = file.name.split('.').pop();
+  const path = `chat/${PAGE_ID}/${Date.now()}_${Math.random().toString(36).substr(2,6)}.${ext}`;
+  
+  try {
+    const { data, error } = await sb.storage
+      .from('edu-chat-files')
+      .upload(path, file, { contentType: file.type });
+    
+    if (error) throw error;
+    
+    const { data: { publicUrl } } = sb.storage
+      .from('edu-chat-files')
+      .getPublicUrl(path);
+    
+    await sb.from('edu_chat').insert({
+      page_id: PAGE_ID,
+      user_id: currentUser.user_id,
+      display_name: currentUser.display_name,
+      avatar_color: currentUser.avatar_color,
+      file_url: publicUrl,
+      file_name: file.name,
+      file_type: isImage ? 'image' : 'file'
+    });
+    
+  } catch(e) {
+    // Storage 버킷 미설정 시 알림
+    alert('파일 업로드 실패: Supabase Storage "edu-chat-files" 버킷을 생성해주세요.');
+    console.error(e);
+  }
+}
+
+function handleFileUpload(input) {
+  const file = input.files[0];
+  if (file) uploadAndSendFile(file);
+  input.value = '';
+}
+
+function setupDragDrop() {
+  let dragCount = 0;
+  document.addEventListener('dragenter', e => {
+    dragCount++;
+    document.getElementById('drag-overlay').classList.add('active');
+  });
+  document.addEventListener('dragleave', e => {
+    dragCount--;
+    if (dragCount === 0) document.getElementById('drag-overlay').classList.remove('active');
+  });
+  document.addEventListener('dragover', e => e.preventDefault());
+  document.addEventListener('drop', e => {
+    e.preventDefault();
+    dragCount = 0;
+    document.getElementById('drag-overlay').classList.remove('active');
+    if (!chatOpen) toggleChat();
+    const file = e.dataTransfer?.files[0];
+    if (file) uploadAndSendFile(file);
+  });
+}
+
+function handlePaste(e) {
+  if (!chatOpen) return;
+  const items = e.clipboardData?.items;
+  if (!items) return;
+  for (const item of items) {
+    if (item.type.startsWith('image/')) {
+      const file = item.getAsFile();
+      if (file) uploadAndSendFile(file);
+    }
+  }
+}
+</script>
+</body>
+</html>

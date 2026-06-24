@@ -1,0 +1,1282 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>관리자 설정 | Copilot 교육</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  :root {
+    --blue:#0f6cbd; --blue-pale:#eff6fc; --blue-light:#2b88d8;
+    --purple:#5c2d91; --purple-pale:#f5f0fb;
+    --surface:#fff; --surface-2:#f8f9fc;
+    --border:#e5e9f0; --text:#1a1d23; --text-2:#5a6070; --text-3:#8c92a0;
+    --success:#16a34a; --danger:#dc2626;
+    --gold:#c99a0f; --gold-pale:#fdf6e3;
+    --radius:12px; --shadow:0 2px 16px rgba(0,0,0,0.07);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;background:var(--surface-2);color:var(--text);min-height:100vh;}
+
+  .header{background:linear-gradient(135deg,#0a2d5c,#3b0e6b);color:#fff;padding:18px 28px;display:flex;align-items:center;gap:14px;}
+  .header-icon{font-size:28px;}
+  .header h1{font-size:18px;font-weight:700;}
+  .header p{font-size:12px;opacity:0.7;margin-top:2px;}
+  .header-back{margin-left:auto;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;border-radius:8px;padding:7px 14px;font-size:13px;cursor:pointer;text-decoration:none;}
+  .header-back:hover{background:rgba(255,255,255,0.25);}
+
+  .layout{display:flex;min-height:calc(100vh - 72px);}
+  .sidebar{width:230px;background:#fff;border-right:1px solid var(--border);padding:16px 12px;flex-shrink:0;}
+  .sidebar-label{font-size:10px;font-weight:700;color:var(--text-3);letter-spacing:0.8px;text-transform:uppercase;margin:14px 4px 6px;}
+  .tab-btn{width:100%;padding:9px 12px;border-radius:8px;border:none;background:none;text-align:left;font-size:13px;color:var(--text-2);cursor:pointer;display:flex;align-items:center;gap:8px;margin-bottom:2px;transition:background 0.15s;}
+  .tab-btn:hover{background:var(--surface-2);}
+  .tab-btn.active{background:var(--blue-pale);color:var(--blue);font-weight:600;}
+
+  .main{flex:1;padding:24px;overflow-y:auto;}
+  .tab-content{display:none;}
+  .tab-content.active{display:block;}
+
+  .card{background:#fff;border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow);margin-bottom:20px;overflow:hidden;}
+  .card-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+  .card-head-info h2{font-size:15px;font-weight:700;}
+  .card-head-info p{font-size:12px;color:var(--text-2);margin-top:2px;}
+  .card-body{padding:20px;}
+
+  label{font-size:12px;font-weight:600;color:var(--text-2);display:block;margin-bottom:5px;}
+  input[type=text],input[type=password]{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;outline:none;transition:border-color 0.2s;font-family:monospace;margin-bottom:12px;}
+  input:focus{border-color:var(--blue);}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+
+  .btn{padding:9px 18px;border-radius:8px;border:none;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.15s;display:inline-flex;align-items:center;gap:6px;}
+  .btn-primary{background:var(--blue);color:#fff;}
+  .btn-primary:hover{background:#0a5ba8;}
+  .btn-danger{background:var(--danger);color:#fff;}
+  .btn-danger:hover{background:#b91c1c;}
+  .btn-secondary{background:var(--surface-2);color:var(--text-2);border:1px solid var(--border);}
+  .btn-secondary:hover{background:var(--border);}
+  .btn-success{background:var(--success);color:#fff;}
+  .btn-success:hover{background:#15803d;}
+  .btn-purple{background:var(--purple);color:#fff;}
+  .btn-purple:hover{background:#4a2275;}
+  .btn:disabled{opacity:0.45;cursor:not-allowed;transform:none!important;}
+
+  .badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;}
+  .badge-green{background:#dcfce7;color:#15803d;}
+  .badge-red{background:#fee2e2;color:#dc2626;}
+  .badge-blue{background:var(--blue-pale);color:var(--blue);}
+  .badge-gold{background:var(--gold-pale);color:#8a6a00;}
+  .badge-gray{background:var(--surface-2);color:var(--text-3);}
+
+  .conn-status{display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:10px;font-size:13px;margin-bottom:16px;}
+  .conn-status.ok{background:#dcfce7;color:#15803d;border:1px solid #86efac;}
+  .conn-status.err{background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;}
+  .conn-status.pending{background:#fef9c3;color:#854d0e;border:1px solid #fde047;}
+
+  .data-table{width:100%;border-collapse:collapse;font-size:13px;}
+  .data-table th{padding:9px 12px;text-align:left;background:var(--surface-2);color:var(--text-2);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--border);}
+  .data-table td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle;}
+  .data-table tr:last-child td{border-bottom:none;}
+  .data-table tr:hover td{background:var(--surface-2);}
+
+  .mini-bar{height:6px;background:var(--border);border-radius:3px;overflow:hidden;width:80px;display:inline-block;}
+  .mini-bar-fill{height:100%;background:linear-gradient(90deg,#0f6cbd,#5c2d91);border-radius:3px;transition:width 0.4s;}
+  .user-avatar{width:28px;height:28px;border-radius:50%;font-size:12px;font-weight:700;color:#fff;display:inline-flex;align-items:center;justify-content:center;}
+
+  /* 토스트 */
+  .toast{position:fixed;top:20px;right:20px;padding:12px 18px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,0.15);z-index:999;opacity:0;transform:translateY(-10px);transition:all 0.3s;min-width:220px;}
+  .toast.show{opacity:1;transform:translateY(0);}
+  .toast.success{background:#16a34a;color:#fff;}
+  .toast.error{background:#dc2626;color:#fff;}
+  .toast.info{background:var(--blue);color:#fff;}
+
+  /* 확인 모달 */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);display:none;align-items:center;justify-content:center;z-index:900;}
+  .modal-overlay.open{display:flex;}
+  .modal-box{background:#fff;border-radius:16px;padding:28px 32px;max-width:400px;width:92%;box-shadow:0 20px 60px rgba(0,0,0,0.2);}
+  .modal-box h3{font-size:17px;margin-bottom:10px;}
+  .modal-box p{font-size:13px;color:var(--text-2);margin-bottom:20px;line-height:1.6;}
+  .modal-btns{display:flex;gap:10px;justify-content:flex-end;}
+
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:20px;}
+  .stat-card{background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;}
+  .stat-card .num{font-size:26px;font-weight:800;margin-bottom:4px;}
+  .stat-card .lbl{font-size:11px;color:var(--text-2);}
+  .blue-num{color:var(--blue);}
+  .purple-num{color:var(--purple);}
+  .green-num{color:var(--success);}
+  .gold-num{color:var(--gold);}
+
+  .empty-state{text-align:center;padding:40px;color:var(--text-3);font-size:13px;}
+  .empty-state .ei{font-size:36px;margin-bottom:8px;}
+  .online-dot{width:8px;height:8px;background:#22c55e;border-radius:50%;display:inline-block;box-shadow:0 0 0 2px rgba(34,197,94,0.3);}
+  .refresh-btn{background:none;border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12px;color:var(--text-2);cursor:pointer;transition:all 0.15s;}
+  .refresh-btn:hover{background:var(--surface-2);}
+
+  /* DB 구성 자동생성 스텝 */
+  .setup-step{display:flex;align-items:flex-start;gap:14px;padding:16px;border:1px solid var(--border);border-radius:10px;margin-bottom:10px;transition:border-color 0.2s,background 0.2s;}
+  .setup-step.done{border-color:#86efac;background:#f0fdf4;}
+  .setup-step.error{border-color:#fca5a5;background:#fff5f5;}
+  .setup-step.running{border-color:#93c5fd;background:#eff6fc;}
+  .step-icon{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;background:var(--surface-2);border:1px solid var(--border);}
+  .setup-step.done .step-icon{background:#dcfce7;border-color:#86efac;}
+  .setup-step.error .step-icon{background:#fee2e2;border-color:#fca5a5;}
+  .setup-step.running .step-icon{background:var(--blue-pale);border-color:#93c5fd;}
+  .step-body{flex:1;}
+  .step-title{font-size:14px;font-weight:700;margin-bottom:3px;}
+  .step-desc{font-size:12px;color:var(--text-2);line-height:1.5;}
+  .step-status{font-size:12px;font-weight:600;margin-top:5px;}
+  .setup-step.done .step-status{color:var(--success);}
+  .setup-step.error .step-status{color:var(--danger);}
+  .setup-step.running .step-status{color:var(--blue);}
+
+  /* 초기화 패널 */
+  .reset-block{padding:16px;border-radius:10px;border:1px solid var(--border);margin-bottom:12px;}
+  .reset-block.danger-border{border-color:#fca5a5;background:#fff8f8;}
+  .reset-block h4{font-size:14px;font-weight:700;margin-bottom:5px;}
+  .reset-block p{font-size:12px;color:var(--text-2);margin-bottom:12px;line-height:1.5;}
+  .reset-btns{display:flex;gap:8px;flex-wrap:wrap;}
+
+  /* 스피너 */
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,0.4);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;}
+  .spinner-dark{border-color:rgba(0,0,0,0.15);border-top-color:var(--blue);}
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+<div class="modal-overlay" id="modal">
+  <div class="modal-box">
+    <h3 id="modal-title"></h3>
+    <p id="modal-desc"></p>
+    <div class="modal-btns">
+      <button class="btn btn-secondary" onclick="closeModal()">취소</button>
+      <button class="btn btn-danger" id="modal-confirm">확인</button>
+    </div>
+  </div>
+</div>
+
+<div class="header">
+  <div class="header-icon">⚙️</div>
+  <div>
+    <h1>관리자 설정 페이지</h1>
+    <p>Copilot 교육 사이트 · DB 관리 및 학습자 현황</p>
+  </div>
+  <a href="index.html" class="header-back">← 교육 사이트로</a>
+</div>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="sidebar-label">연결 & 설정</div>
+    <button class="tab-btn active" onclick="showTab('tab-db')" id="nav-tab-db">🔌 DB 연결 정보</button>
+    <button class="tab-btn" onclick="showTab('tab-setup')" id="nav-tab-setup">🚀 DB 자동 구성</button>
+
+    <div class="sidebar-label">학습자 관리</div>
+    <button class="tab-btn" onclick="showTab('tab-users')" id="nav-tab-users">👥 학습자 현황</button>
+    <button class="tab-btn" onclick="showTab('tab-progress')" id="nav-tab-progress">📊 진행률 현황</button>
+
+    <div class="sidebar-label">데이터 관리</div>
+    <button class="tab-btn" onclick="showTab('tab-data')" id="nav-tab-data">🗄️ 데이터 조회</button>
+    <button class="tab-btn" onclick="showTab('tab-reset')" id="nav-tab-reset">🧹 데이터 초기화</button>
+
+    <div class="sidebar-label">접근 관리</div>
+    <button class="tab-btn" onclick="showTab('tab-pw')" id="nav-tab-pw">🔐 입장 비밀번호</button>
+
+    <div class="sidebar-label">순위</div>
+    <button class="tab-btn" onclick="showTab('tab-ranking')" id="nav-tab-ranking">🏆 보너스 퀴즈 순위</button>
+  </div>
+
+  <div class="main">
+
+    <!-- ───── DB 연결 정보 ───── -->
+    <div class="tab-content active" id="tab-db">
+      <div class="card">
+        <div class="card-head">
+          <div class="card-head-info"><h2>🔌 Supabase 연결 정보</h2><p>현재 적용된 프로젝트 연결 상태</p></div>
+        </div>
+        <div class="card-body">
+          <div class="conn-status pending" id="conn-status">⏳ 연결 확인 중...</div>
+          <div class="field-row">
+            <div>
+              <label>PROJECT URL</label>
+              <input type="text" id="db-url" value="https://koozkqdpmzuanzpcotsv.supabase.co" readonly style="color:var(--text-3);">
+            </div>
+            <div>
+              <label>PUBLISHABLE KEY</label>
+              <input type="password" id="db-key" value="sb_publishable_tgw1uLAyJZaVgzfH7lTYAA_gLPst_GA" readonly style="color:var(--text-3);">
+            </div>
+          </div>
+          <div style="margin-bottom:16px;">
+            <label>PAGE ID</label>
+            <input type="text" value="beginner" readonly style="color:var(--text-3);width:160px;margin-bottom:0;">
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-primary" onclick="testConnection()">🔍 연결 테스트</button>
+            <button class="btn btn-secondary" onclick="toggleKey()">👁️ KEY 표시/숨김</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div class="card-head-info"><h2>📋 테이블 현황</h2><p>edu_ 테이블 존재 여부 확인</p></div>
+          <button class="refresh-btn" style="margin-left:auto;" onclick="checkTables()">🔄 새로고침</button>
+        </div>
+        <div class="card-body" id="table-status-body">
+          <div class="empty-state"><div class="ei">⏳</div>확인 중...</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div class="card-head-info"><h2>📊 DB 통계</h2><p>실시간 데이터 현황</p></div>
+          <button class="refresh-btn" style="margin-left:auto;" onclick="loadStats()">🔄 새로고침</button>
+        </div>
+        <div class="card-body">
+          <div class="stat-grid">
+            <div class="stat-card"><div class="num blue-num" id="stat-sessions">-</div><div class="lbl">전체 등록 학습자</div></div>
+            <div class="stat-card"><div class="num green-num" id="stat-online">-</div><div class="lbl">현재 온라인 (30분)</div></div>
+            <div class="stat-card"><div class="num purple-num" id="stat-progress">-</div><div class="lbl">진행 기록 수</div></div>
+            <div class="stat-card"><div class="num gold-num" id="stat-chat">-</div><div class="lbl">채팅 메시지 수</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ───── DB 자동 구성 ───── -->
+    <div class="tab-content" id="tab-setup">
+      <div class="card">
+        <div class="card-head">
+          <div class="card-head-info">
+            <h2>🚀 DB 자동 구성</h2>
+            <p>버튼 한 번으로 테이블 생성 · RLS 설정 · Realtime 활성화까지 자동 처리</p>
+          </div>
+        </div>
+        <div class="card-body">
+          <div style="padding:12px 16px;background:var(--blue-pale);border-radius:8px;font-size:13px;color:var(--blue);margin-bottom:20px;">
+            💡 이미 테이블이 존재하면 <strong>건드리지 않고 스킵</strong>합니다. 중복 생성 걱정 없이 실행하세요.
+          </div>
+
+          <!-- 스텝 목록 -->
+          <div id="setup-steps">
+            <div class="setup-step" id="step-sessions">
+              <div class="step-icon">1️⃣</div>
+              <div class="step-body">
+                <div class="step-title">edu_sessions 테이블</div>
+                <div class="step-desc">학습자 로그인 세션, 온라인 상태, 포인트, 현재 카드 위치 저장</div>
+                <div class="step-status" id="step-sessions-status">대기 중</div>
+              </div>
+            </div>
+            <div class="setup-step" id="step-progress">
+              <div class="step-icon">2️⃣</div>
+              <div class="step-body">
+                <div class="step-title">edu_progress 테이블</div>
+                <div class="step-desc">학습자별 카드 완료 기록 및 획득 포인트 저장</div>
+                <div class="step-status" id="step-progress-status">대기 중</div>
+              </div>
+            </div>
+            <div class="setup-step" id="step-chat">
+              <div class="step-icon">3️⃣</div>
+              <div class="step-body">
+                <div class="step-title">edu_chat 테이블</div>
+                <div class="step-desc">페이지별 실시간 채팅 메시지, 파일/이미지 첨부 정보 저장</div>
+                <div class="step-status" id="step-chat-status">대기 중</div>
+              </div>
+            </div>
+            <div class="setup-step" id="step-rls">
+              <div class="step-icon">4️⃣</div>
+              <div class="step-body">
+                <div class="step-title">RLS 정책 확인</div>
+                <div class="step-desc">Row Level Security 활성화 및 익명(anon) 접근 정책 설정 확인</div>
+                <div class="step-status" id="step-rls-status">대기 중</div>
+              </div>
+            </div>
+            <div class="setup-step" id="step-storage">
+              <div class="step-icon">5️⃣</div>
+              <div class="step-body">
+                <div class="step-title">Storage 버킷 (edu-chat-files)</div>
+                <div class="step-desc">채팅 파일/이미지 업로드용 Public 버킷 생성</div>
+                <div class="step-status" id="step-storage-status">대기 중</div>
+              </div>
+            </div>
+            <div class="setup-step" id="step-pwcol">
+              <div class="step-icon">6️⃣</div>
+              <div class="step-body">
+                <div class="step-title">password 컬럼 확인</div>
+                <div class="step-desc">edu_sessions 테이블에 학습자 개인 비밀번호 저장 컬럼 존재 여부 확인</div>
+                <div class="step-status" id="step-pwcol-status">대기 중</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top:20px;display:flex;gap:10px;align-items:center;">
+            <button class="btn btn-success" id="run-setup-btn" onclick="runSetup()" style="font-size:15px;padding:12px 28px;">
+              ⚡ 자동 구성 시작
+            </button>
+            <button class="btn btn-secondary" onclick="resetSetupUI()">↩️ 상태 초기화</button>
+          </div>
+
+          <!-- 구성 완료 후 결과 -->
+          <div id="setup-result" style="display:none;margin-top:16px;padding:14px 16px;border-radius:10px;font-size:13px;font-weight:600;"></div>
+
+          <div style="margin-top:20px;padding:12px 16px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;font-size:12px;color:#15803d;line-height:1.8;">
+            ✅ <strong>Realtime</strong>: Database → Publications → supabase_realtime에서 edu_chat·edu_sessions 토글 ON<br>
+            ✅ <strong>Storage Policy</strong>: SQL Editor에서 3개 Policy 실행 (storage.objects에 anon SELECT/INSERT/DELETE)<br>
+            ✅ <strong>Storage 버킷</strong>: Dashboard → Storage → New Bucket → <code style="background:rgba(0,0,0,0.06);padding:1px 5px;border-radius:3px;">edu-chat-files</code> → Public ON
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ───── 학습자 현황 ───── -->
+    <div class="tab-content" id="tab-users">
+      <div class="card">
+        <div class="card-head">
+          <div class="card-head-info"><h2>👥 전체 학습자 현황</h2><p>등록된 모든 학습자 및 접속 정보</p></div>
+          <button class="refresh-btn" style="margin-left:auto;" onclick="loadUsers()">🔄 새로고침</button>
+        </div>
+        <div class="card-body" id="users-body">
+          <div class="empty-state"><div class="ei">⏳</div>로딩 중...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ───── 진행률 현황 ───── -->
+    <div class="tab-content" id="tab-progress">
+      <div class="card">
+        <div class="card-head">
+          <div class="card-head-info"><h2>📊 학습자별 진행률</h2><p>카드 완료 현황 및 포인트 리더보드</p></div>
+          <button class="refresh-btn" style="margin-left:auto;" onclick="loadProgressView()">🔄 새로고침</button>
+        </div>
+        <div class="card-body" id="progress-body">
+          <div class="empty-state"><div class="ei">⏳</div>로딩 중...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ───── 데이터 조회 ───── -->
+    <div class="tab-content" id="tab-data">
+      <div class="card">
+        <div class="card-head"><div class="card-head-info"><h2>🗄️ edu_sessions</h2></div><button class="refresh-btn" style="margin-left:auto;" onclick="loadRawSessions()">🔄</button></div>
+        <div class="card-body" id="raw-sessions"><div class="empty-state"><div class="ei">🗂️</div>탭 진입 시 자동 로드</div></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-head-info"><h2>📈 edu_progress</h2></div><button class="refresh-btn" style="margin-left:auto;" onclick="loadRawProgress()">🔄</button></div>
+        <div class="card-body" id="raw-progress"><div class="empty-state"><div class="ei">🗂️</div>탭 진입 시 자동 로드</div></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-head-info"><h2>💬 edu_chat</h2></div><button class="refresh-btn" style="margin-left:auto;" onclick="loadRawChat()">🔄</button></div>
+        <div class="card-body" id="raw-chat"><div class="empty-state"><div class="ei">🗂️</div>탭 진입 시 자동 로드</div></div>
+      </div>
+    </div>
+
+    <!-- ───── 데이터 초기화 ───── -->
+    <div class="tab-content" id="tab-reset">
+      <div class="card">
+        <div class="card-head" style="background:#fff5f5;border-bottom-color:#fca5a5;">
+          <div class="card-head-info">
+            <h2 style="color:var(--danger);">🧹 데이터 초기화</h2>
+            <p>삭제된 데이터는 복구 불가합니다. 버튼 클릭 시 재확인 창이 뜹니다.</p>
+          </div>
+        </div>
+        <div class="card-body">
+
+          <!-- 섹션 1: 선택 초기화 -->
+          <div style="font-size:12px;font-weight:700;color:var(--text-3);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:10px;">선택 초기화</div>
+
+          <div class="reset-block">
+            <h4>🕐 비활성 세션만 정리</h4>
+            <p>30분 이상 접속하지 않은 세션 삭제. 진행률·채팅은 유지됩니다.</p>
+            <div class="reset-btns">
+              <button class="btn btn-secondary" onclick="doReset('inactive-sessions')">🧹 비활성 세션 삭제</button>
+            </div>
+          </div>
+
+          <div class="reset-block">
+            <h4>💬 오래된 채팅만 정리</h4>
+            <p>7일 이상 된 채팅 메시지 삭제. 세션·진행률은 유지됩니다.</p>
+            <div class="reset-btns">
+              <button class="btn btn-secondary" onclick="doReset('old-chats')">🧹 7일+ 채팅 삭제</button>
+            </div>
+          </div>
+
+          <div class="reset-block">
+            <h4>🗑️ 특정 학습자 삭제</h4>
+            <p>해당 학습자의 세션 + 진행률 데이터 모두 삭제.</p>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <input type="text" id="delete-uid" placeholder="닉네임 입력" style="width:200px;margin-bottom:0;">
+              <button class="btn btn-danger" onclick="doReset('single-user')">삭제</button>
+            </div>
+          </div>
+
+          <!-- 섹션 2: 테이블별 전체 초기화 -->
+          <div style="font-size:12px;font-weight:700;color:var(--text-3);letter-spacing:0.5px;text-transform:uppercase;margin:20px 0 10px;">테이블 전체 초기화</div>
+
+          <div class="reset-block danger-border">
+            <h4>💥 테이블별 전체 삭제</h4>
+            <p>선택한 테이블의 <strong>모든 행</strong>을 삭제합니다. 테이블 구조는 유지됩니다.</p>
+            <div class="reset-btns">
+              <button class="btn btn-danger" onclick="doReset('all-sessions')">세션 전체</button>
+              <button class="btn btn-danger" onclick="doReset('all-progress')">진행률 전체</button>
+              <button class="btn btn-danger" onclick="doReset('all-chat')">채팅 전체</button>
+            </div>
+          </div>
+
+          <div class="reset-block danger-border">
+            <h4 style="color:var(--danger);">⚡ 완전 초기화 (전체 삭제)</h4>
+            <p>세션 + 진행률 + 채팅 <strong>3개 테이블 전체</strong>를 한 번에 비웁니다. 절대 되돌릴 수 없습니다.</p>
+            <div class="reset-btns">
+              <button class="btn btn-purple" style="font-size:14px;padding:10px 20px;" onclick="doReset('all')">💥 전체 완전 초기화</button>
+            </div>
+          </div>
+
+          <!-- 결과 로그 -->
+          <div id="reset-log" style="display:none;margin-top:16px;background:#0d1117;color:#e6edf3;border-radius:8px;padding:14px;font-family:monospace;font-size:12px;line-height:1.8;max-height:200px;overflow-y:auto;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ───── 입장 비밀번호 ───── -->
+    <div class="tab-content" id="tab-pw">
+      <div class="card">
+        <div class="card-head">
+          <div class="card-head-info">
+            <h2>🔐 비밀번호 관리</h2>
+            <p>학습자별 비밀번호는 DB(edu_sessions)에 저장됩니다</p>
+          </div>
+        </div>
+        <div class="card-body">
+          <div style="padding:12px 16px;background:var(--blue-pale);border-radius:8px;font-size:13px;color:var(--blue);margin-bottom:20px;line-height:1.8;">
+            💡 <strong>동작 방식</strong><br>
+            • 처음 닉네임+비밀번호 입력 → DB에 계정 생성<br>
+            • 같은 닉네임으로 재접속 시 → 저장된 비밀번호와 일치해야 입장<br>
+            • 다른 사람이 같은 닉네임+다른 비밀번호 → ❌ 차단<br>
+            • 동시 접속 (5분 이내 활성) → ❌ 차단
+          </div>
+
+          <div style="padding:16px;border:1px solid var(--border);border-radius:10px;margin-bottom:12px;">
+            <h4 style="margin-bottom:6px;font-size:14px;">🔑 특정 학습자 비밀번호 초기화</h4>
+            <p style="font-size:13px;color:var(--text-2);margin-bottom:12px;">학습자가 비밀번호를 잊었을 때 새 비밀번호로 변경해줍니다.</p>
+            <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+              <input type="text" id="reset-pw-uid" placeholder="닉네임" style="width:160px;margin-bottom:0;">
+              <input type="password" id="reset-pw-new" placeholder="새 비밀번호" style="width:160px;margin-bottom:0;">
+              <button class="btn btn-primary" onclick="adminResetPw()">🔑 변경</button>
+            </div>
+            <div id="pw-msg" style="font-size:13px;min-height:18px;"></div>
+          </div>
+
+          <div style="padding:16px;border:1px solid var(--border);border-radius:10px;">
+            <h4 style="margin-bottom:6px;font-size:14px;">📋 전체 학습자 비밀번호 목록</h4>
+            <p style="font-size:13px;color:var(--text-2);margin-bottom:12px;">등록된 모든 학습자의 닉네임과 비밀번호를 조회합니다.</p>
+            <button class="btn btn-secondary" onclick="loadPwList()">📋 목록 조회</button>
+            <div id="pw-list" style="margin-top:12px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div class="card-head-info"><h2>⚡ 강제 로그아웃</h2><p>특정 학습자의 세션을 즉시 만료시킵니다 (last_seen을 과거로 설정)</p></div>
+        </div>
+        <div class="card-body">
+          <div style="font-size:13px;color:var(--text-2);margin-bottom:12px;">
+            세션을 만료시키면 해당 학습자는 5분 내로 자동 로그아웃되거나 다음 접속 시 재로그인이 필요합니다.
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">
+            <input type="text" id="force-logout-uid" placeholder="닉네임 입력" style="width:200px;margin-bottom:0;">
+            <button class="btn btn-danger" onclick="forceLogout()">⚡ 강제 로그아웃</button>
+            <button class="btn btn-danger" onclick="forceLogoutAll()" style="background:#7c3aed;">전체 강제 로그아웃</button>
+          </div>
+          <div id="force-logout-msg" style="font-size:13px;min-height:18px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ───── 보너스 퀴즈 순위 ───── -->
+    <div class="tab-content" id="tab-ranking">
+      <div class="card">
+        <div class="card-head">
+          <div class="card-head-info">
+            <h2>🏆 보너스 퀴즈 선착순 순위</h2>
+            <p>만점(10/10) 달성 후 완료 시간 기준 순위 — 상위 10위 표시</p>
+          </div>
+          <button class="refresh-btn" style="margin-left:auto;" onclick="loadRanking()">🔄 새로고침</button>
+        </div>
+        <div class="card-body" id="ranking-body">
+          <div class="empty-state"><div class="ei">⏳</div>로딩 중...</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div class="card-head-info"><h2>🗑️ 순위 초기화</h2><p>보너스 퀴즈 순위 데이터를 삭제합니다</p></div>
+        </div>
+        <div class="card-body">
+          <div style="font-size:13px;color:var(--text-2);margin-bottom:12px;">특정 사용자 순위를 삭제하거나 전체 순위를 초기화합니다.</div>
+          <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;">
+            <input type="text" id="del-rank-uid" placeholder="닉네임 입력" style="width:180px;margin-bottom:0;">
+            <button class="btn btn-danger" onclick="deleteRankUser()">해당 사용자 삭제</button>
+            <button class="btn btn-danger" style="background:#7c3aed;" onclick="deleteAllRanking()">전체 순위 초기화</button>
+          </div>
+          <div id="ranking-msg" style="font-size:13px;min-height:18px;"></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /layout -->
+
+<script>
+const SUPABASE_URL = 'https://koozkqdpmzuanzpcotsv.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_tgw1uLAyJZaVgzfH7lTYAA_gLPst_GA';
+const PAGE_ID = 'beginner';
+const TOTAL_CARDS = 12;
+
+let sb = null;
+let modalCb = null;
+
+window.addEventListener('DOMContentLoaded', async () => {
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  testConnection();
+  checkTables();
+  loadStats();
+});
+
+// ── 탭 전환 ──
+function showTab(id) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.getElementById('nav-' + id).classList.add('active');
+  if (id === 'tab-users') loadUsers();
+  if (id === 'tab-progress') loadProgressView();
+  if (id === 'tab-data') { loadRawSessions(); loadRawProgress(); loadRawChat(); }
+  if (id === 'tab-pw') initPwTab();
+  if (id === 'tab-ranking') loadRanking();
+}
+
+function toggleKey() {
+  const el = document.getElementById('db-key');
+  el.type = el.type === 'password' ? 'text' : 'password';
+}
+
+// ── 연결 테스트 ──
+async function testConnection() {
+  const el = document.getElementById('conn-status');
+  el.className = 'conn-status pending'; el.textContent = '⏳ 연결 테스트 중...';
+  try {
+    const { error } = await sb.from('edu_sessions').select('count', { count:'exact', head:true });
+    if (error && error.code !== 'PGRST116' && error.code !== '42P01') throw error;
+    el.className = 'conn-status ok';
+    el.textContent = '✅ Supabase 연결 성공! (프로젝트: koozkqdpmzuanzpcotsv)';
+  } catch(e) {
+    el.className = 'conn-status err';
+    el.textContent = '❌ 연결 실패: ' + (e.message || '알 수 없는 오류');
+  }
+}
+
+// ── 테이블 현황 ──
+async function checkTables() {
+  const body = document.getElementById('table-status-body');
+  const tables = ['edu_sessions','edu_progress','edu_chat'];
+  const descs = { edu_sessions:'로그인 세션 / 온라인 상태', edu_progress:'카드 완료 / 포인트', edu_chat:'실시간 채팅' };
+  let html = '<table class="data-table"><thead><tr><th>테이블</th><th>상태</th><th>행 수</th><th>설명</th></tr></thead><tbody>';
+  for (const t of tables) {
+    try {
+      const { count, error } = await sb.from(t).select('*', { count:'exact', head:true });
+      if (error) throw error;
+      html += `<tr><td><code>${t}</code></td><td><span class="badge badge-green">✅ 존재</span></td><td>${count ?? 0}행</td><td>${descs[t]}</td></tr>`;
+    } catch {
+      html += `<tr><td><code>${t}</code></td><td><span class="badge badge-red">❌ 없음</span></td><td>-</td><td>🚀 DB 자동 구성 탭에서 생성</td></tr>`;
+    }
+  }
+  html += '</tbody></table>';
+  body.innerHTML = html;
+}
+
+// ── DB 통계 ──
+async function loadStats() {
+  try {
+    const [s, o, p, c] = await Promise.all([
+      sb.from('edu_sessions').select('*',{count:'exact',head:true}),
+      sb.from('edu_sessions').select('*',{count:'exact',head:true}).gte('last_seen',new Date(Date.now()-30*60*1000).toISOString()),
+      sb.from('edu_progress').select('*',{count:'exact',head:true}),
+      sb.from('edu_chat').select('*',{count:'exact',head:true}),
+    ]);
+    document.getElementById('stat-sessions').textContent = s.count ?? 0;
+    document.getElementById('stat-online').textContent   = o.count ?? 0;
+    document.getElementById('stat-progress').textContent = p.count ?? 0;
+    document.getElementById('stat-chat').textContent     = c.count ?? 0;
+  } catch { /* 테이블 없으면 조용히 */ }
+}
+
+// ────────────────────────────────────────────
+// 🚀 DB 자동 구성
+// ────────────────────────────────────────────
+const SETUP_STEPS = ['sessions','progress','chat','rls','storage','pwcol'];
+
+function setStep(id, state, msg) {
+  const el = document.getElementById('step-' + id);
+  el.className = 'setup-step ' + state;
+  const icons = { done:'✅', error:'❌', running:'⏳', '':'' };
+  el.querySelector('.step-icon').textContent = { sessions:'1️⃣', progress:'2️⃣', chat:'3️⃣', rls:'4️⃣', storage:'5️⃣', pwcol:'6️⃣' }[id];
+  if (state === 'running') el.querySelector('.step-icon').innerHTML = '<div class="spinner spinner-dark"></div>';
+  document.getElementById('step-' + id + '-status').textContent = (icons[state] || '') + ' ' + msg;
+}
+
+function resetSetupUI() {
+  SETUP_STEPS.forEach(id => setStep(id, '', '대기 중'));
+  document.getElementById('setup-result').style.display = 'none';
+  document.getElementById('run-setup-btn').disabled = false;
+  document.getElementById('run-setup-btn').innerHTML = '⚡ 자동 구성 시작';
+}
+
+async function runSetup() {
+  const btn = document.getElementById('run-setup-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> 구성 중...';
+
+  let errors = [];
+  const SQL_URL = 'https://supabase.com/dashboard/project/koozkqdpmzuanzpcotsv/sql/new';
+
+  // ── 테이블 존재 여부 확인 헬퍼 ──
+  async function checkTable(name) {
+    const { error } = await sb.from(name).select('id').limit(1);
+    // error 없으면 존재, PGRST116(없음) 또는 42P01(없음)이면 미존재
+    if (!error) return 'exists';
+    if (error.code === 'PGRST116' || error.code === '42P01' || error.message?.includes('does not exist')) return 'missing';
+    return 'error:' + error.message;
+  }
+
+  // ─ Step 1: edu_sessions ─
+  setStep('sessions', 'running', '테이블 확인 중...');
+  const s1 = await checkTable('edu_sessions');
+  if (s1 === 'exists') {
+    setStep('sessions', 'done', '✅ 존재 확인 — 정상');
+  } else {
+    setStep('sessions', 'error', '테이블 없음 → 아래 SQL 실행 필요');
+    errors.push('edu_sessions');
+  }
+
+  // ─ Step 2: edu_progress ─
+  setStep('progress', 'running', '테이블 확인 중...');
+  const s2 = await checkTable('edu_progress');
+  if (s2 === 'exists') {
+    setStep('progress', 'done', '✅ 존재 확인 — 정상');
+  } else {
+    setStep('progress', 'error', '테이블 없음 → 아래 SQL 실행 필요');
+    errors.push('edu_progress');
+  }
+
+  // ─ Step 3: edu_chat ─
+  setStep('chat', 'running', '테이블 확인 중...');
+  const s3 = await checkTable('edu_chat');
+  if (s3 === 'exists') {
+    setStep('chat', 'done', '✅ 존재 확인 — 정상');
+  } else {
+    setStep('chat', 'error', '테이블 없음 → 아래 SQL 실행 필요');
+    errors.push('edu_chat');
+  }
+
+  // ─ Step 4: RLS 쓰기 권한 실제 테스트 ─
+  setStep('rls', 'running', 'RLS 정책 확인 중...');
+  try {
+    const testRow = { user_id:'__rls_test__', display_name:'test', page_id:'test' };
+    const { error: upsertErr } = await sb.from('edu_sessions').upsert(testRow, { onConflict:'user_id' });
+    if (!upsertErr) {
+      await sb.from('edu_sessions').delete().eq('user_id','__rls_test__');
+      setStep('rls', 'done', '✅ RLS 정책 정상 — 읽기/쓰기 가능');
+    } else {
+      setStep('rls', 'error', 'RLS 차단: ' + upsertErr.message);
+      errors.push('RLS정책');
+    }
+  } catch(e) {
+    // 테이블 자체가 없으면 RLS 테스트 불가 — 스킵
+    if (errors.some(e => e.startsWith('edu_'))) {
+      setStep('rls', '', '테이블 생성 후 재확인 필요');
+    } else {
+      setStep('rls', 'error', e.message);
+      errors.push('RLS정책');
+    }
+  }
+
+  // ─ Step 5: Storage 버킷 — 실제 업로드 테스트로 확인 ─
+  setStep('storage', 'running', '버킷 업로드 테스트 중...');
+  try {
+    const testBlob = new Blob(['1'], { type: 'text/plain' });
+    const testPath = `_test/setting_check_${Date.now()}.txt`;
+    const { error: uploadErr } = await sb.storage
+      .from('edu-chat-files')
+      .upload(testPath, testBlob, { upsert: true });
+
+    if (!uploadErr) {
+      await sb.storage.from('edu-chat-files').remove([testPath]);
+      setStep('storage', 'done', '✅ 버킷 정상 — 업로드/삭제 권한 확인');
+    } else if (uploadErr.message?.includes('Bucket not found') || uploadErr.statusCode === 404) {
+      setStep('storage', 'error', '버킷 없음 → Dashboard → Storage → New Bucket → edu-chat-files (Public)');
+      errors.push('Storage버킷');
+    } else if (uploadErr.message?.includes('policy') || uploadErr.statusCode === 403 || uploadErr.message?.includes('row-level')) {
+      setStep('storage', 'error', 'Policy 없음 → SQL Editor에서 Storage Policies SQL 실행 필요');
+      errors.push('Storage정책');
+    } else {
+      setStep('storage', 'error', uploadErr.message);
+      errors.push('Storage버킷');
+    }
+  } catch(e) {
+    setStep('storage', 'error', e.message);
+    errors.push('Storage버킷');
+  }
+
+  // ─ Step 6: password 컬럼 확인 ─
+  setStep('pwcol', 'running', 'password 컬럼 확인 중...');
+  try {
+    // password 컬럼이 있으면 select에서 에러 없이 반환됨
+    const { error: colErr } = await sb.from('edu_sessions')
+      .select('password').limit(1);
+    if (!colErr) {
+      setStep('pwcol', 'done', '✅ password 컬럼 존재 확인');
+    } else if (colErr.message?.includes('password') || colErr.code === '42703') {
+      setStep('pwcol', 'error', 'password 컬럼 없음 → 아래 SQL 실행 필요');
+      errors.push('password컬럼');
+    } else {
+      // 테이블 자체가 없는 경우 (Step1에서 이미 에러로 잡힘)
+      setStep('pwcol', '', '테이블 생성 후 자동 포함');
+    }
+  } catch(e) {
+    setStep('pwcol', 'error', e.message);
+    errors.push('password컬럼');
+  }
+
+  // ─ 결과 박스 ─
+  const resultEl = document.getElementById('setup-result');
+  resultEl.style.display = 'block';
+
+  const tableErrors = errors.filter(e => e.startsWith('edu_'));
+
+  if (errors.length === 0) {
+    resultEl.style.cssText = 'display:block;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:10px;padding:14px 16px;font-size:13px;font-weight:600;margin-top:16px;';
+    resultEl.innerHTML = '🎉 모든 구성 완료! 교육 사이트를 바로 사용할 수 있습니다.';
+    showToast('✅ DB 구성 완료!', 'success');
+  } else {
+    resultEl.style.cssText = 'display:block;background:#fff8e1;color:#7a5800;border:1px solid #fde047;border-radius:10px;padding:14px 16px;font-size:13px;margin-top:16px;line-height:1.8;';
+    let html = `⚠️ 미완료 항목: <strong>${errors.join(', ')}</strong><br>`;
+    if (tableErrors.length > 0) {
+      html += `<br>📋 <strong>테이블 생성 필요</strong> — 아래 버튼으로 SQL Editor를 열고 database-setup.sql 내용을 붙여넣어 실행하세요.<br>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+          <a href="database-setup.sql" download
+            style="display:inline-flex;align-items:center;gap:6px;background:var(--blue);color:#fff;padding:8px 14px;border-radius:8px;text-decoration:none;font-weight:600;font-size:13px;">
+            ⬇️ SQL 파일 다운로드
+          </a>
+          <a href="${SQL_URL}" target="_blank"
+            style="display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--border);color:var(--text);padding:8px 14px;border-radius:8px;text-decoration:none;font-weight:600;font-size:13px;">
+            🔗 Supabase SQL Editor 열기
+          </a>
+        </div>
+        <div style="margin-top:10px;font-size:12px;color:var(--text-2);">실행 완료 후 <strong>🔄 다시 확인</strong> 버튼을 눌러주세요.</div>`;
+    }
+    if (errors.includes('Storage버킷')) {
+      html += `<br>🪣 <strong>Storage 버킷 없음</strong> — Supabase Dashboard → Storage → New Bucket → 이름: <code>edu-chat-files</code> → Public ON 후 재확인`;
+    }
+    if (errors.includes('password컬럼')) {
+      html += `<br><br>🔑 <strong>password 컬럼 없음</strong> — 아래 SQL을 SQL Editor에서 실행하세요.
+        <div style="background:#0d1117;color:#e6edf3;border-radius:8px;padding:10px 14px;font-family:monospace;font-size:12px;margin-top:6px;">
+          ALTER TABLE edu_sessions ADD COLUMN IF NOT EXISTS password TEXT;
+        </div>
+        <div style="margin-top:8px;">
+          <a href="${SQL_URL}" target="_blank"
+            style="display:inline-flex;align-items:center;gap:6px;background:var(--blue);color:#fff;padding:7px 14px;border-radius:8px;text-decoration:none;font-weight:600;font-size:12px;">
+            🔗 SQL Editor 열기
+          </a>
+          <button onclick="copyAlterSQL()" class="btn btn-secondary" style="font-size:12px;padding:7px 14px;margin-left:6px;">📋 SQL 복사</button>
+        </div>`;
+    }
+    if (errors.includes('Storage정책')) {
+      html += `<br><br>🔐 <strong>Storage Policy 없음</strong> — 아래 SQL을 SQL Editor에서 실행하세요.
+        <div style="background:#0d1117;color:#e6edf3;border-radius:8px;padding:12px 14px;font-family:monospace;font-size:11px;line-height:1.8;margin-top:8px;white-space:pre;">CREATE POLICY "public_read" ON storage.objects
+  FOR SELECT TO anon USING (bucket_id = 'edu-chat-files');
+
+CREATE POLICY "public_upload" ON storage.objects
+  FOR INSERT TO anon WITH CHECK (bucket_id = 'edu-chat-files');
+
+CREATE POLICY "public_delete" ON storage.objects
+  FOR DELETE TO anon USING (bucket_id = 'edu-chat-files');</div>
+        <div style="margin-top:8px;display:flex;gap:8px;">
+          <a href="${SQL_URL}" target="_blank"
+            style="display:inline-flex;align-items:center;gap:6px;background:var(--blue);color:#fff;padding:7px 14px;border-radius:8px;text-decoration:none;font-weight:600;font-size:12px;">
+            🔗 SQL Editor 열기
+          </a>
+          <button onclick="copyStorageSQL()" class="btn btn-secondary" style="font-size:12px;padding:7px 14px;">📋 SQL 복사</button>
+        </div>`;
+    }
+    resultEl.innerHTML = html;
+    showToast('⚠️ 일부 수동 처리 필요', 'info');
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '🔄 다시 확인';
+  checkTables();
+  loadStats();
+}
+
+// ── 학습자 현황 ──
+async function loadUsers() {
+  const body = document.getElementById('users-body');
+  body.innerHTML = '<div class="empty-state"><div class="ei">⏳</div>로딩 중...</div>';
+  try {
+    const { data, error } = await sb.from('edu_sessions').select('*').order('last_seen',{ascending:false});
+    if (error) throw error;
+    if (!data?.length) { body.innerHTML = '<div class="empty-state"><div class="ei">👥</div>등록된 학습자 없음</div>'; return; }
+    const now = Date.now();
+    let html = `<table class="data-table"><thead><tr>
+      <th>학습자</th><th>상태</th><th>현재 카드</th><th>포인트</th><th>마지막 접속</th><th>관리</th>
+    </tr></thead><tbody>`;
+    data.forEach(u => {
+      const diff = (now - new Date(u.last_seen).getTime()) / 60000;
+      const online = diff < 30;
+      html += `<tr>
+        <td><div style="display:flex;align-items:center;gap:8px;">
+          <div class="user-avatar" style="background:${u.avatar_color}">${u.display_name[0]}</div>
+          <strong>${u.display_name}</strong></div></td>
+        <td>${online ? '<span class="badge badge-green"><span class="online-dot"></span> 온라인</span>' : '<span class="badge badge-gray">오프라인</span>'}</td>
+        <td>${(u.current_card||0)+1} / ${TOTAL_CARDS}</td>
+        <td><span class="badge badge-gold">🪙 ${u.total_points||0} pt</span></td>
+        <td style="font-size:12px;color:var(--text-2);">${new Date(u.last_seen).toLocaleString('ko-KR')}</td>
+        <td><button class="btn btn-danger" style="padding:5px 10px;font-size:12px;"
+            onclick="doReset('single-user-inline','${u.user_id}')">삭제</button></td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    body.innerHTML = html;
+  } catch(e) { body.innerHTML = `<div class="empty-state"><div class="ei">❌</div>${e.message}</div>`; }
+}
+
+// ── 진행률 현황 ──
+async function loadProgressView() {
+  const body = document.getElementById('progress-body');
+  body.innerHTML = '<div class="empty-state"><div class="ei">⏳</div>로딩 중...</div>';
+  try {
+    const [{ data: sessions }, { data: progress }] = await Promise.all([
+      sb.from('edu_sessions').select('*').order('total_points',{ascending:false}),
+      sb.from('edu_progress').select('*')
+    ]);
+    if (!sessions?.length) { body.innerHTML = '<div class="empty-state"><div class="ei">📊</div>데이터 없음</div>'; return; }
+    const map = {};
+    progress?.forEach(p => { if (!map[p.user_id]) map[p.user_id]=[]; map[p.user_id].push(p.card_index); });
+    let html = `<table class="data-table"><thead><tr>
+      <th>순위</th><th>학습자</th><th>완료</th><th>진행률</th><th>포인트</th><th>카드 현황</th>
+    </tr></thead><tbody>`;
+    sessions.forEach((u,i) => {
+      const done = map[u.user_id]?.length || 0;
+      const pct  = Math.round(done / TOTAL_CARDS * 100);
+      const cards = Array.from({length:TOTAL_CARDS},(_,idx) => map[u.user_id]?.includes(idx)?'🟢':'⬜').join('');
+      const rank  = i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1);
+      html += `<tr>
+        <td style="font-size:18px;font-weight:800;">${rank}</td>
+        <td><div style="display:flex;align-items:center;gap:8px;">
+          <div class="user-avatar" style="background:${u.avatar_color}">${u.display_name[0]}</div>
+          <strong>${u.display_name}</strong></div></td>
+        <td>${done}/${TOTAL_CARDS}</td>
+        <td><div style="display:flex;align-items:center;gap:8px;">
+          <div class="mini-bar"><div class="mini-bar-fill" style="width:${pct}%"></div></div>
+          <span style="font-size:12px;font-weight:600;color:var(--blue);">${pct}%</span></div></td>
+        <td><span class="badge badge-gold">🪙 ${u.total_points||0}</span></td>
+        <td style="font-size:13px;letter-spacing:1px;">${cards}</td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    body.innerHTML = html;
+  } catch(e) { body.innerHTML = `<div class="empty-state"><div class="ei">❌</div>${e.message}</div>`; }
+}
+
+// ── Raw 조회 ──
+async function loadRawSessions() {
+  const body = document.getElementById('raw-sessions');
+  try {
+    const { data } = await sb.from('edu_sessions').select('*').order('created_at',{ascending:false}).limit(30);
+    body.innerHTML = renderTable(data, ['user_id','display_name','total_points','current_card','page_id','last_seen']);
+  } catch(e) { body.innerHTML = `<div class="empty-state"><div class="ei">❌</div>${e.message}</div>`; }
+}
+async function loadRawProgress() {
+  const body = document.getElementById('raw-progress');
+  try {
+    const { data } = await sb.from('edu_progress').select('*').order('completed_at',{ascending:false}).limit(50);
+    body.innerHTML = renderTable(data, ['user_id','page_id','card_index','points_earned','completed_at']);
+  } catch(e) { body.innerHTML = `<div class="empty-state"><div class="ei">❌</div>${e.message}</div>`; }
+}
+async function loadRawChat() {
+  const body = document.getElementById('raw-chat');
+  try {
+    const { data } = await sb.from('edu_chat').select('*').order('created_at',{ascending:false}).limit(50);
+    body.innerHTML = renderTable(data, ['display_name','message','file_name','file_type','created_at']);
+  } catch(e) { body.innerHTML = `<div class="empty-state"><div class="ei">❌</div>${e.message}</div>`; }
+}
+function renderTable(data, cols) {
+  if (!data?.length) return '<div class="empty-state"><div class="ei">📭</div>데이터 없음</div>';
+  let h = `<div style="overflow-x:auto;"><table class="data-table"><thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>`;
+  data.forEach(row => {
+    h += `<tr>${cols.map(c => {
+      let v = row[c] ?? '-';
+      if (String(v).length > 50) v = String(v).substring(0,50)+'…';
+      return `<td style="font-size:12px;font-family:monospace;">${v}</td>`;
+    }).join('')}</tr>`;
+  });
+  return h + '</tbody></table></div>';
+}
+
+// ────────────────────────────────────────────
+// 🧹 데이터 초기화 (쿼리 직접 날림)
+// ────────────────────────────────────────────
+const RESET_CONFIG = {
+  'inactive-sessions': {
+    title: '비활성 세션 삭제',
+    desc: '30분 이상 비활성 세션을 삭제합니다.',
+    confirmLabel: '삭제',
+    btnClass: 'btn-secondary',
+  },
+  'old-chats': {
+    title: '7일+ 채팅 삭제',
+    desc: '7일 이상 된 채팅 메시지를 삭제합니다.',
+    confirmLabel: '삭제',
+    btnClass: 'btn-secondary',
+  },
+  'single-user': {
+    title: '학습자 삭제',
+    desc: '',  // 동적 생성
+    confirmLabel: '삭제',
+    btnClass: 'btn-danger',
+  },
+  'single-user-inline': {
+    title: '학습자 삭제',
+    desc: '',
+    confirmLabel: '삭제',
+    btnClass: 'btn-danger',
+  },
+  'all-sessions': {
+    title: '⚠️ edu_sessions 전체 삭제',
+    desc: '세션 테이블의 모든 데이터를 삭제합니다. 되돌릴 수 없습니다.',
+    confirmLabel: '전체 삭제',
+    btnClass: 'btn-danger',
+  },
+  'all-progress': {
+    title: '⚠️ edu_progress 전체 삭제',
+    desc: '진행률 테이블의 모든 데이터를 삭제합니다. 되돌릴 수 없습니다.',
+    confirmLabel: '전체 삭제',
+    btnClass: 'btn-danger',
+  },
+  'all-chat': {
+    title: '⚠️ edu_chat 전체 삭제',
+    desc: '채팅 테이블의 모든 데이터를 삭제합니다. 되돌릴 수 없습니다.',
+    confirmLabel: '전체 삭제',
+    btnClass: 'btn-danger',
+  },
+  'all': {
+    title: '💥 전체 완전 초기화',
+    desc: '세션 + 진행률 + 채팅 3개 테이블을 모두 비웁니다. 절대 되돌릴 수 없습니다!',
+    confirmLabel: '전체 초기화',
+    btnClass: 'btn-purple',
+  },
+};
+
+function doReset(type, inlineUid) {
+  const cfg = RESET_CONFIG[type];
+  if (!cfg) return;
+
+  let uid = inlineUid;
+  if (type === 'single-user') {
+    uid = document.getElementById('delete-uid').value.trim();
+    if (!uid) { showToast('닉네임을 입력하세요', 'error'); return; }
+    cfg.desc = `"${uid}" 학습자의 세션·진행률 데이터를 모두 삭제합니다.`;
+  }
+  if (type === 'single-user-inline') {
+    cfg.desc = `"${uid}" 학습자의 세션·진행률 데이터를 모두 삭제합니다.`;
+  }
+
+  showModal(cfg.title, cfg.desc, cfg.confirmLabel, async () => {
+    await executeReset(type, uid);
+  });
+}
+
+async function executeReset(type, uid) {
+  const log = document.getElementById('reset-log');
+  log.style.display = 'block';
+  const addLog = (msg) => { log.textContent += msg + '\n'; log.scrollTop = log.scrollHeight; };
+  log.textContent = '';
+  addLog(`[${new Date().toLocaleTimeString('ko-KR')}] 초기화 시작: ${type}`);
+
+  try {
+    let result = {};
+
+    if (type === 'inactive-sessions') {
+      const cutoff = new Date(Date.now() - 30*60*1000).toISOString();
+      const { count, error } = await sb.from('edu_sessions').delete({ count:'exact' }).lt('last_seen', cutoff);
+      if (error) throw error;
+      addLog(`✅ 비활성 세션 ${count ?? 0}개 삭제`);
+      showToast(`✅ 비활성 세션 ${count ?? 0}개 삭제`, 'success');
+    }
+
+    else if (type === 'old-chats') {
+      const cutoff = new Date(Date.now() - 7*24*60*60*1000).toISOString();
+      const { count, error } = await sb.from('edu_chat').delete({ count:'exact' }).lt('created_at', cutoff);
+      if (error) throw error;
+      addLog(`✅ 오래된 채팅 ${count ?? 0}개 삭제`);
+      showToast(`✅ 채팅 ${count ?? 0}개 삭제`, 'success');
+    }
+
+    else if (type === 'single-user' || type === 'single-user-inline') {
+      const { count: c1, error: e1 } = await sb.from('edu_sessions').delete({ count:'exact' }).eq('user_id', uid);
+      if (e1) throw e1;
+      const { count: c2, error: e2 } = await sb.from('edu_progress').delete({ count:'exact' }).eq('user_id', uid);
+      if (e2) throw e2;
+      addLog(`✅ 세션 ${c1 ?? 0}개, 진행률 ${c2 ?? 0}개 삭제 (${uid})`);
+      showToast(`✅ "${uid}" 삭제 완료`, 'success');
+      if (document.getElementById('tab-users').classList.contains('active')) loadUsers();
+    }
+
+    else if (type === 'all-sessions') {
+      // edu_sessions: created_at 컬럼 존재
+      const { count, error } = await sb.from('edu_sessions').delete({ count:'exact' }).gte('created_at','1900-01-01');
+      if (error) throw error;
+      addLog(`✅ edu_sessions ${count ?? 0}행 전체 삭제`);
+      showToast(`✅ 세션 ${count ?? 0}행 삭제`, 'success');
+    }
+
+    else if (type === 'all-progress') {
+      // edu_progress: completed_at 컬럼 사용 (created_at 없음)
+      const { count, error } = await sb.from('edu_progress').delete({ count:'exact' }).gte('completed_at','1900-01-01');
+      if (error) throw error;
+      addLog(`✅ edu_progress ${count ?? 0}행 전체 삭제`);
+      showToast(`✅ 진행률 ${count ?? 0}행 삭제`, 'success');
+    }
+
+    else if (type === 'all-chat') {
+      const { count, error } = await sb.from('edu_chat').delete({ count:'exact' }).gte('created_at','1900-01-01');
+      if (error) throw error;
+      addLog(`✅ edu_chat ${count ?? 0}행 전체 삭제`);
+      showToast(`✅ 채팅 ${count ?? 0}행 삭제`, 'success');
+    }
+
+    else if (type === 'all') {
+      // 순서대로 실행 (참조 관계 고려)
+      const r1 = await sb.from('edu_chat').delete({ count:'exact' }).gte('created_at','1900-01-01');
+      if (r1.error) throw r1.error;
+      addLog(`✅ edu_chat      : ${r1.count ?? 0}행 삭제`);
+
+      const r2 = await sb.from('edu_progress').delete({ count:'exact' }).gte('completed_at','1900-01-01');
+      if (r2.error) throw r2.error;
+      addLog(`✅ edu_progress  : ${r2.count ?? 0}행 삭제`);
+
+      const r3 = await sb.from('edu_sessions').delete({ count:'exact' }).gte('created_at','1900-01-01');
+      if (r3.error) throw r3.error;
+      addLog(`✅ edu_sessions  : ${r3.count ?? 0}행 삭제`);
+
+      addLog(`🎉 전체 초기화 완료`);
+      showToast('🎉 전체 초기화 완료', 'success');
+    }
+
+    addLog(`[${new Date().toLocaleTimeString('ko-KR')}] 완료`);
+    loadStats();
+
+  } catch(e) {
+    addLog(`❌ 오류: ${e.message}`);
+    showToast('오류: ' + e.message, 'error');
+  }
+}
+
+// ── 모달 ──
+function showModal(title, desc, confirmLabel, cb, btnClass) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-desc').textContent = desc;
+  const confirmBtn = document.getElementById('modal-confirm');
+  confirmBtn.textContent = confirmLabel || '확인';
+  const cls = btnClass || RESET_CONFIG[Object.keys(RESET_CONFIG).find(k => RESET_CONFIG[k].title === title)]?.btnClass || 'btn-danger';
+  confirmBtn.className = 'btn ' + cls;
+  modalCb = cb;
+  document.getElementById('modal').classList.add('open');
+  confirmBtn.onclick = () => { closeModal(); cb(); };
+}
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+
+// ────────────────────────────────────────────
+// 🔐 비밀번호 관리 (학습자별 개인 비번)
+// ────────────────────────────────────────────
+function initPwTab() {
+  loadPwList();
+}
+
+async function adminResetPw() {
+  const uid  = document.getElementById('reset-pw-uid').value.trim();
+  const npw  = document.getElementById('reset-pw-new').value;
+  const msg  = document.getElementById('pw-msg');
+  if (!uid)        { msg.style.color='var(--danger)'; msg.textContent='닉네임을 입력하세요.'; return; }
+  if (npw.length < 2) { msg.style.color='var(--danger)'; msg.textContent='새 비밀번호를 입력하세요.'; return; }
+  try {
+    const { error } = await sb.from('edu_sessions').update({ password: npw }).eq('user_id', uid);
+    if (error) throw error;
+    msg.style.color = 'var(--success)';
+    msg.textContent = `✅ "${uid}"의 비밀번호가 "${npw}"로 변경됐습니다.`;
+    showToast('✅ 비밀번호 변경 완료', 'success');
+    loadPwList();
+  } catch(e) { msg.style.color='var(--danger)'; msg.textContent='❌ ' + e.message; }
+}
+
+async function loadPwList() {
+  const el = document.getElementById('pw-list');
+  if (!el) return;
+  try {
+    const { data, error } = await sb.from('edu_sessions')
+      .select('user_id, display_name, password, avatar_color, last_seen')
+      .order('created_at', { ascending: true });
+    if (error) throw error;
+    if (!data?.length) { el.innerHTML = '<div style="font-size:13px;color:var(--text-3);">등록된 학습자 없음</div>'; return; }
+    const now = Date.now();
+    let html = `<table class="data-table" style="margin-top:4px;">
+      <thead><tr><th>닉네임</th><th>비밀번호</th><th>상태</th><th>마지막 접속</th></tr></thead><tbody>`;
+    data.forEach(u => {
+      const diff = (now - new Date(u.last_seen).getTime()) / 60000;
+      const online = diff < 5;
+      html += `<tr>
+        <td><div style="display:flex;align-items:center;gap:6px;">
+          <div class="user-avatar" style="background:${u.avatar_color};width:22px;height:22px;font-size:10px;">${u.display_name[0]}</div>
+          ${u.display_name}</div></td>
+        <td><code style="background:var(--surface-2);padding:2px 6px;border-radius:4px;">${u.password || '-'}</code></td>
+        <td>${online ? '<span class="badge badge-green">온라인</span>' : '<span class="badge badge-gray">오프라인</span>'}</td>
+        <td style="font-size:11px;color:var(--text-3);">${new Date(u.last_seen).toLocaleString('ko-KR')}</td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch(e) { el.innerHTML = `<div style="font-size:13px;color:var(--danger);">❌ ${e.message}</div>`; }
+}
+
+// ────────────────────────────────────────────
+// ⚡ 강제 로그아웃
+// ────────────────────────────────────────────
+async function forceLogout() {
+  const uid = document.getElementById('force-logout-uid').value.trim();
+  const msg = document.getElementById('force-logout-msg');
+  if (!uid) { msg.style.color='var(--danger)'; msg.textContent='닉네임을 입력하세요.'; return; }
+  try {
+    // last_seen을 1시간 전으로 설정 → 5분 이내 활성 체크에서 제외됨
+    const pastTime = new Date(Date.now() - 60*60*1000).toISOString();
+    const { error } = await sb.from('edu_sessions').update({ last_seen: pastTime }).eq('user_id', uid);
+    if (error) throw error;
+    msg.style.color = 'var(--success)';
+    msg.textContent = `✅ "${uid}" 세션 만료 처리 완료. 해당 학습자는 재로그인이 필요합니다.`;
+    showToast(`✅ "${uid}" 강제 로그아웃`, 'success');
+    loadUsers();
+  } catch(e) { msg.style.color='var(--danger)'; msg.textContent='❌ ' + e.message; }
+}
+
+async function forceLogoutAll() {
+  showModal('전체 강제 로그아웃', '모든 학습자의 세션을 만료시킵니다. 재로그인이 필요합니다.', '전체 로그아웃', async () => {
+    try {
+      const pastTime = new Date(Date.now() - 60*60*1000).toISOString();
+      const { count, error } = await sb.from('edu_sessions')
+        .update({ last_seen: pastTime }, { count:'exact' })
+        .gte('created_at','1900-01-01');
+      if (error) throw error;
+      document.getElementById('force-logout-msg').style.color = 'var(--success)';
+      document.getElementById('force-logout-msg').textContent = `✅ ${count ?? 0}명 전체 세션 만료 처리 완료`;
+      showToast(`✅ 전체 강제 로그아웃 (${count ?? 0}명)`, 'success');
+      loadUsers();
+    } catch(e) {
+      document.getElementById('force-logout-msg').style.color = 'var(--danger)';
+      document.getElementById('force-logout-msg').textContent = '❌ ' + e.message;
+    }
+  });
+}
+
+// ────────────────────────────────────────────
+// 🏆 보너스 퀴즈 순위
+// ────────────────────────────────────────────
+async function loadRanking() {
+  const body = document.getElementById('ranking-body');
+  if (!body) return;
+  body.innerHTML = '<div class="empty-state"><div class="ei">⏳</div>로딩 중...</div>';
+  try {
+    const { data, error } = await sb.from('edu_bonus_ranking')
+      .select('*').order('rank', { ascending: true }).limit(10);
+    if (error) throw error;
+    if (!data?.length) {
+      body.innerHTML = '<div class="empty-state"><div class="ei">🏆</div>아직 순위 등록자가 없습니다.<br>보너스 퀴즈 만점자가 등록됩니다!</div>'; return;
+    }
+    const medals = ['🥇','🥈','🥉'];
+    let html = `<table class="data-table">
+      <thead><tr><th>순위</th><th>학습자</th><th>포인트</th><th>완료 시간</th><th>관리</th></tr></thead><tbody>`;
+    data.forEach((u, i) => {
+      const medal = i < 3 ? medals[i] : `<span style="font-weight:700;color:var(--text-2);">${u.rank}위</span>`;
+      const time  = new Date(u.completed_at).toLocaleString('ko-KR');
+      html += `<tr>
+        <td style="font-size:22px;text-align:center;">${medal}</td>
+        <td><div style="display:flex;align-items:center;gap:8px;">
+          <div class="user-avatar" style="background:${u.avatar_color}">${u.display_name[0]}</div>
+          <strong>${u.display_name}</strong></div></td>
+        <td><span class="badge badge-gold">🪙 ${u.total_points} pt</span></td>
+        <td style="font-size:12px;color:var(--text-2);">${time}</td>
+        <td><button class="btn btn-danger" style="padding:4px 10px;font-size:12px;"
+            onclick="deleteRankUserInline('${u.user_id}')">삭제</button></td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    if (data.length === 0) html = '<div class="empty-state"><div class="ei">🏆</div>아직 없음</div>';
+    body.innerHTML = html;
+  } catch(e) {
+    body.innerHTML = `<div class="empty-state"><div class="ei">❌</div>${e.message}<br><small>edu_bonus_ranking 테이블이 없으면 아래 SQL을 실행하세요.</small></div>`;
+  }
+}
+
+async function deleteRankUser() {
+  const uid = document.getElementById('del-rank-uid').value.trim();
+  const msg = document.getElementById('ranking-msg');
+  if (!uid) { msg.style.color='var(--danger)'; msg.textContent='닉네임을 입력하세요.'; return; }
+  showModal('순위 삭제', `"${uid}"의 보너스 순위를 삭제합니다.`, '삭제', async () => {
+    const { error } = await sb.from('edu_bonus_ranking').delete().eq('user_id', uid);
+    if (error) { msg.style.color='var(--danger)'; msg.textContent='❌ '+error.message; return; }
+    msg.style.color='var(--success)'; msg.textContent=`✅ "${uid}" 순위 삭제 완료`;
+    showToast('✅ 삭제 완료','success'); loadRanking();
+  });
+}
+
+async function deleteRankUserInline(uid) {
+  showModal('순위 삭제', `"${uid}"의 보너스 순위를 삭제합니다.`, '삭제', async () => {
+    await sb.from('edu_bonus_ranking').delete().eq('user_id', uid);
+    showToast('✅ 삭제 완료','success'); loadRanking();
+  });
+}
+
+async function deleteAllRanking() {
+  showModal('전체 순위 초기화', '모든 보너스 퀴즈 순위를 삭제합니다.', '전체 삭제', async () => {
+    const { error } = await sb.from('edu_bonus_ranking').delete().gte('rank', 0);
+    if (error) { showToast('❌ '+error.message,'error'); return; }
+    showToast('✅ 전체 순위 초기화 완료','success'); loadRanking();
+  });
+}
+
+// ── ALTER TABLE SQL 복사 ──
+function copyAlterSQL() {
+  navigator.clipboard.writeText("ALTER TABLE edu_sessions ADD COLUMN IF NOT EXISTS password TEXT;")
+    .then(() => showToast('✅ SQL 복사 완료!', 'success'));
+}
+
+// ── Storage Policy SQL 복사 ──
+function copyStorageSQL() {
+  const sql = `CREATE POLICY "public_read" ON storage.objects
+  FOR SELECT TO anon USING (bucket_id = 'edu-chat-files');
+
+CREATE POLICY "public_upload" ON storage.objects
+  FOR INSERT TO anon WITH CHECK (bucket_id = 'edu-chat-files');
+
+CREATE POLICY "public_delete" ON storage.objects
+  FOR DELETE TO anon USING (bucket_id = 'edu-chat-files');`;
+  navigator.clipboard.writeText(sql).then(() => showToast('✅ SQL 복사 완료!', 'success'));
+}
+
+// ── 토스트 ──
+function showToast(msg, type='info') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = `toast ${type} show`;
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+</script>
+</body>
+</html>
