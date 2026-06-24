@@ -1612,7 +1612,7 @@ function checkAnswer(el, qid, _) {
 }
 
 async function finishBonusQuiz() {
-  const perfect = bonusQuizCorrect === 10;
+  const perfect = bonusQuizCorrect === 8;
   const rank = perfect ? await saveBonusRanking() : null;
 
   const resultDiv = document.getElementById('bonus-result');
